@@ -87,8 +87,64 @@ describe("domain/routines and domain/impact", () => {
     expect(result.personalReductionPercent).toBeGreaterThan(30);
     expect(result.personalReductionPercent).toBeLessThanOrEqual(99);
     expect(result.communityCo2SavedGrams).toBe(1560);
-    expect(result.communityNoxSavedGrams).toBeGreaterThan(1.5);
+    expect(result.communityNoxSavedGrams).toBe(1.68);
     expect(result.breakdown).toHaveLength(5);
+
+    const exact = calculateDirectImpact(
+      {
+        commuteDistanceKm: 10,
+        swapCarToCleanTransit: true,
+        shiftActivityToBestWindow: true,
+        wearFittedN95Outdoors: true,
+        useCleanCookingAndExhaust: true,
+        runIndoorAirFiltration: true,
+        outdoorHours: 1,
+        bestWindowPm25UgM3: 40,
+      },
+      { pm25: 100, pm10: 200, no2: 80, o3: 30, so2: 20, co: 2000 },
+      {
+        persona: "general",
+        commuteMode: "car",
+        homeEnergyMode: "gas_biomass",
+        filtrationMode: "hepa",
+      },
+    );
+    expect(exact).toEqual({
+      personalPm25AvoidedUg: 369,
+      baselineOutdoorPm25InhaledUg: 440,
+      personalReductionPercent: 84,
+      communityCo2SavedGrams: 1300,
+      communityNoxSavedGrams: 1.4,
+      breakdown: [
+        { id: "commute_emissions", pm25AvoidedUg: 0, co2SavedGrams: 1300, noxSavedGrams: 1.4 },
+        { id: "timing_exposure", pm25AvoidedUg: 108, co2SavedGrams: 0, noxSavedGrams: 0 },
+        { id: "mask_protection", pm25AvoidedUg: 66, co2SavedGrams: 0, noxSavedGrams: 0 },
+        { id: "indoor_filtration", pm25AvoidedUg: 169, co2SavedGrams: 0, noxSavedGrams: 0 },
+        { id: "clean_cooking", pm25AvoidedUg: 26, co2SavedGrams: 0, noxSavedGrams: 0 },
+      ],
+    });
+
+    const cappedPct = calculateDirectImpact(
+      {
+        commuteDistanceKm: 0,
+        swapCarToCleanTransit: true,
+        shiftActivityToBestWindow: false,
+        wearFittedN95Outdoors: false,
+        useCleanCookingAndExhaust: true,
+        runIndoorAirFiltration: true,
+        outdoorHours: 0,
+        bestWindowPm25UgM3: 5,
+      },
+      { pm25: 10, pm10: 20, no2: 10, o3: 20, so2: 5, co: 200 },
+      {
+        persona: "general",
+        commuteMode: "walk_cycle",
+        homeEnergyMode: "gas_biomass",
+        filtrationMode: "hepa",
+      },
+    );
+    expect(cappedPct.personalReductionPercent).toBe(99);
+    expect(cappedPct.communityCo2SavedGrams).toBe(0);
   });
 
   it("returns zero savings when no swaps are selected and supports two-wheeler & DIY filter factors", () => {
@@ -147,15 +203,41 @@ describe("domain/routines and domain/impact", () => {
     );
 
     const routinesCleanGas = buildRoutinesAndAlternatives({
-      usAqi: 45,
-      smog: assessWinterSmog(45, CLEAN_READINGS),
-      readings: CLEAN_READINGS,
+      usAqi: 100,
+      smog: assessWinterSmog(100, { ...CLEAN_READINGS, no2: 59 }),
+      readings: { ...CLEAN_READINGS, no2: 59 },
+      profile: { ...CAR_GAS_PROFILE, commuteMode: "two_wheeler" },
+      bestWindowHourIso: "2026-11-26T15:00:00Z",
+    });
+    expect(routinesCleanGas.find((r) => r.id === "shift_to_transit_or_active")).toMatchObject({
+      category: "commute",
+      priority: "medium",
+      suggestedHourIso: "2026-11-26T15:00:00Z",
+    });
+    expect(routinesCleanGas.find((r) => r.id === "clean_cooking_switch")).toMatchObject({
+      category: "home",
+      priority: "medium",
+      suggestedHourIso: undefined,
+    });
+    expect(routinesCleanGas.find((r) => r.id === "outdoor_exercise_reschedule")).toMatchObject({
+      category: "exercise",
+      priority: "medium",
+      suggestedHourIso: "2026-11-26T15:00:00Z",
+    });
+
+    const atThreshold101 = buildRoutinesAndAlternatives({
+      usAqi: 101,
+      smog: assessWinterSmog(101, { ...CLEAN_READINGS, no2: 60 }),
+      readings: { ...CLEAN_READINGS, no2: 60 },
       profile: CAR_GAS_PROFILE,
       bestWindowHourIso: "2026-11-26T15:00:00Z",
     });
-    expect(routinesCleanGas.find((r) => r.id === "shift_to_transit_or_active")?.priority).toBe(
-      "medium",
+    expect(atThreshold101.find((r) => r.id === "outdoor_exercise_reschedule")?.priority).toBe(
+      "high",
     );
-    expect(routinesCleanGas.find((r) => r.id === "clean_cooking_switch")?.priority).toBe("medium");
+    expect(atThreshold101.find((r) => r.id === "shift_to_transit_or_active")?.priority).toBe(
+      "high",
+    );
+    expect(atThreshold101.find((r) => r.id === "clean_cooking_switch")?.priority).toBe("high");
   });
 });

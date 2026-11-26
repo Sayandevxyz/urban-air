@@ -15,13 +15,13 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   NEXT_PUBLIC_DEFAULT_DEMO_MODE: z.enum(["true", "false"]).default("false"),
   OPEN_METEO_AIR_QUALITY_BASE_URL: z
-    .url()
+    .string()
     .refine(isAllowlistedHttpsUrl, {
       error: "OPEN_METEO_AIR_QUALITY_BASE_URL must use HTTPS on an allowlisted host.",
     })
     .default("https://air-quality-api.open-meteo.com/v1"),
   OPEN_METEO_GEOCODING_BASE_URL: z
-    .url()
+    .string()
     .refine(isAllowlistedHttpsUrl, {
       error: "OPEN_METEO_GEOCODING_BASE_URL must use HTTPS on an allowlisted host.",
     })
@@ -68,7 +68,7 @@ export function parseEnv(rawEnv: Record<string, string | undefined>): ValidatedE
   const parsed = envSchema.safeParse(normalized);
   if (!parsed.success) {
     const issueSummary = parsed.error.issues
-      .map((issue) => `${issue.path.join(".") || "env"}: ${issue.message}`)
+      .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
       .join("; ");
     throw new AppError("CONFIG_ERROR", `Invalid environment configuration: ${issueSummary}`, 500);
   }

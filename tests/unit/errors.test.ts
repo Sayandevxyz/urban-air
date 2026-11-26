@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AppError, err, ok, toSafeErrorResponse } from "@/lib/errors";
+import { safeJsonParse } from "@/lib/json";
 
 describe("AppError and Result utilities", () => {
   it("wraps success and failure Results cleanly", () => {
@@ -34,5 +35,16 @@ describe("AppError and Result utilities", () => {
     expect(response.statusCode).toBe(500);
     expect(JSON.stringify(response.body)).not.toContain("SECRET_DB_DSN");
     expect(response.body.error.code).toBe("INTERNAL_ERROR");
+  });
+
+  it("safeJsonParse returns Result without throwing on malformed JSON", () => {
+    const valid = safeJsonParse('{"aqi":42}');
+    expect(valid).toEqual({ ok: true, value: { aqi: 42 } });
+
+    const broken = safeJsonParse("{invalid");
+    expect(broken.ok).toBe(false);
+
+    const empty = safeJsonParse("");
+    expect(empty.ok).toBe(false);
   });
 });

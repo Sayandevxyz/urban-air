@@ -64,8 +64,13 @@ describe("InMemoryTokenBucketRateLimiter", () => {
     expect(extractClientIp(new Headers(), true)).toBe("127.0.0.1");
 
     expect(isValidIpAddress("192.0.2.1")).toBe(true);
+    expect(isValidIpAddress("1000.0.0.1")).toBe(false);
     expect(isValidIpAddress("256.0.0.1")).toBe(false);
     expect(isValidIpAddress("not-an-ip")).toBe(false);
+    expect(isValidIpAddress("2001:0db8:85a3:0000:0000:8a2e:0370:7334:extra:long")).toBe(false);
+    expect(extractClientIp(new Headers({ "x-forwarded-for": ", 1.2.3.4" }), true)).toBe(
+      "127.0.0.1",
+    );
 
     process.env.TRUST_PROXY = "true";
     resetEnvCache();

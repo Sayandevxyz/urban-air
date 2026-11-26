@@ -51,14 +51,29 @@ const FORECAST_24H: readonly HourlyForecastPoint[] = [
 ];
 
 describe("domain/planner (O(n) scoring)", () => {
-  it("picks the lowest-pollution daylight window for running and cycling", () => {
+  it("picks the lowest-pollution daylight window for running and cycling with exact penalty math", () => {
     const runPlan = scoreActivityWindows(FORECAST_24H, "run", "athlete");
-    expect(runPlan.bestWindow?.timeIso).toBe("2026-11-26T14:00:00Z");
-    expect(runPlan.worstWindow?.timeIso).toBe("2026-11-26T06:00:00Z");
+    expect(runPlan.bestWindow).toMatchObject({
+      timeIso: "2026-11-26T14:00:00Z",
+      aqiPenalty: 42,
+      pollutantPenalty: 8,
+      timeSuitabilityBonus: 6,
+      score: 56,
+    });
+    expect(runPlan.worstWindow).toMatchObject({
+      timeIso: "2026-11-26T06:00:00Z",
+      aqiPenalty: 75,
+      pollutantPenalty: 25,
+      timeSuitabilityBonus: -4,
+      score: 0,
+    });
     expect(runPlan.timeline).toHaveLength(5);
 
     const cyclePlan = scoreActivityWindows(FORECAST_24H, "cycle", "general");
-    expect(cyclePlan.bestWindow?.timeIso).toBe("2026-11-26T14:00:00Z");
+    expect(cyclePlan.bestWindow).toMatchObject({
+      timeIso: "2026-11-26T14:00:00Z",
+      aqiPenalty: 36,
+    });
   });
 
   it("applies stricter sensitivity penalties for asthma/elderly/pregnant/children personas", () => {
@@ -103,5 +118,28 @@ describe("domain/planner (O(n) scoring)", () => {
     expect(capped.timeline).toHaveLength(2);
     expect(capped.bestWindow?.timeIso).toBe("2026-11-26T09:00:00Z");
     expect(capped.worstWindow?.timeIso).toBe("2026-11-26T06:00:00Z");
+
+    const mkPt = (hr: string): HourlyForecastPoint => ({
+      timeIso: `2026-11-26T${hr}:00:00Z`,
+      usAqi: 20,
+      europeanAqi: 10,
+      pm25: 5,
+      pm10: 10,
+      no2: 10,
+      o3: 30,
+    });
+    const ventBonuses = scoreActivityWindows(
+      ["06", "07", "10", "11", "16", "17", "20", "21"].map(mkPt),
+      "ventilate",
+      "general",
+    ).timeline.map((p) => p.timeSuitabilityBonus);
+    expect(ventBonuses).toEqual([-6, 0, 0, 8, 8, 0, 0, -6]);
+
+    const walkBonuses = scoreActivityWindows(
+      ["06", "07", "19", "20"].map(mkPt),
+      "walk",
+      "general",
+    ).timeline.map((p) => p.timeSuitabilityBonus);
+    expect(walkBonuses).toEqual([-4, 6, 6, -4]);
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CityLocation } from "@/domain/types";
 import { fetchApiJson } from "@/hooks/apiClient";
 import { useAsyncResource } from "@/hooks/useAsyncResource";
@@ -37,11 +37,7 @@ async function fetchSearchOutcome(
   return res.kind === "error" ? { status: "error", results: [] } : null;
 }
 
-/**
- * Debounced city autocomplete hook (300 ms) with AbortController cancellation and 429 handling.
- */
-export function useCitySearch(demoMode: boolean) {
-  const [query, setQuery] = useState("");
+function useSearchOutcomeState() {
   const [results, setResults] = useState<readonly CityLocation[]>([]);
   const [status, setStatus] = useState<SearchStatus>("idle");
   const [retryAfterSeconds, setRetryAfterSeconds] = useState(0);
@@ -53,7 +49,28 @@ export function useCitySearch(demoMode: boolean) {
     setStatus("idle");
   }, [abortPending]);
 
+  const applyOutcome = useCallback((outcome: SearchOutcome | null) => {
+    if (!outcome) return;
+    setResults(outcome.results);
+    setStatus(outcome.status);
+    if (outcome.retryAfterSeconds !== undefined) setRetryAfterSeconds(outcome.retryAfterSeconds);
+  }, []);
+
+  return { results, status, setStatus, retryAfterSeconds, nextSignal, clearResults, applyOutcome };
+}
+
+function useSearchDebounceEffect(
+  query: string,
+  demoMode: boolean,
+  skipNextEffectRef: { current: boolean },
+  state: ReturnType<typeof useSearchOutcomeState>,
+) {
+  const { clearResults, nextSignal, applyOutcome, setStatus } = state;
   useEffect(() => {
+    if (skipNextEffectRef.current) {
+      skipNextEffectRef.current = false;
+      return;
+    }
     const trimmed = query.trim();
     if (trimmed.length < MIN_CITY_QUERY_LENGTH) {
       clearResults();
@@ -62,19 +79,41 @@ export function useCitySearch(demoMode: boolean) {
     const timer = setTimeout(() => {
       const signal = nextSignal();
       setStatus("loading");
-      void fetchSearchOutcome(trimmed, demoMode, signal).then((outcome) => {
-        if (!outcome) return;
-        setResults(outcome.results);
-        setStatus(outcome.status);
-        if (outcome.retryAfterSeconds !== undefined) {
-          setRetryAfterSeconds(outcome.retryAfterSeconds);
-        }
-      });
+      void fetchSearchOutcome(trimmed, demoMode, signal).then(applyOutcome);
     }, SEARCH_DEBOUNCE_MS);
     return () => {
       clearTimeout(timer);
     };
-  }, [clearResults, demoMode, nextSignal, query]);
+  }, [applyOutcome, clearResults, demoMode, nextSignal, query, setStatus, skipNextEffectRef]);
+}
 
-  return { query, setQuery, results, status, retryAfterSeconds, clearResults };
+/**
+ * Debounced city autocomplete hook (300 ms) with AbortController cancellation and 429 handling.
+ */
+export function useCitySearch(demoMode: boolean) {
+  const [query, setQuery] = useState("");
+  const skipNextEffectRef = useRef(false);
+  const state = useSearchOutcomeState();
+  const { clearResults, results, status, retryAfterSeconds } = state;
+
+  const setSelectedQueryLabel = useCallback(
+    (label: string) => {
+      skipNextEffectRef.current = true;
+      setQuery(label);
+      clearResults();
+    },
+    [clearResults],
+  );
+
+  useSearchDebounceEffect(query, demoMode, skipNextEffectRef, state);
+
+  return {
+    query,
+    setQuery,
+    setSelectedQueryLabel,
+    results,
+    status,
+    retryAfterSeconds,
+    clearResults,
+  };
 }

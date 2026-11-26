@@ -102,7 +102,7 @@ export class SwrMemoryCache {
     void this.runDeduplicatedFetch(key, policy, fetcher, shouldCache).catch((error: unknown) => {
       logger.warn("Background cache revalidation failed", {
         key,
-        reason: error instanceof Error ? error.message : "unknown",
+        reason: String(error),
       });
     });
   }

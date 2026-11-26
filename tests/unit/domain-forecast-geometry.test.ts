@@ -40,8 +40,17 @@ describe("domain/forecastChartGeometry", () => {
     expect(geo.minHourly).toBe(60);
     expect(geo.maxHourly).toBe(180);
     expect(geo.chartMax).toBe(200);
+    expect(geo.thresholdY).toBe(104);
     expect(geo.tickMarkers.map((m) => m.label)).toEqual(["00:00", "06:00", "12:00"]);
-    expect(geo.polylinePoints.split(" ")).toHaveLength(13);
+    expect(geo.tickMarkers[0]?.x).toBe(40);
+    expect(geo.tickMarkers[1]?.x).toBe(332);
+    expect(geo.tickMarkers[2]?.x).toBe(624);
+    expect(geo.tickMarkers[0]?.y).toBeCloseTo(139.2, 1);
+    const poly = geo.polylinePoints.split(" ");
+    expect(poly).toHaveLength(13);
+    expect(poly[0]).toBe("40,139");
+    expect(poly[6]).toBe("332,86");
+    expect(poly[12]).toBe("624,34");
   });
 
   it("computes daily bar positions and min height bounds for 7-day trend charts", () => {
@@ -52,11 +61,21 @@ describe("domain/forecastChartGeometry", () => {
     const result = buildDailyGeometry(daily);
     expect(result.dailyMax).toBe(210);
     expect(result.bars).toHaveLength(2);
-    expect(result.bars[0]?.dateLabel).toBe("11-26");
-    expect(result.bars[0]?.height).toBe(6);
-    expect(result.bars[1]?.y).toBeGreaterThanOrEqual(CHART_PAD_TOP);
-    expect((result.bars[1]?.y ?? 0) + (result.bars[1]?.height ?? 0)).toBeLessThanOrEqual(
-      CHART_HEIGHT,
-    );
+    expect(result.bars[0]).toMatchObject({
+      dateLabel: "11-26",
+      width: 48,
+      x: 162,
+      y: 186,
+      height: 6,
+    });
+    const secondBar = result.bars[1];
+    if (!secondBar) {
+      throw new Error("Expected second bar");
+    }
+    expect(secondBar.x).toBe(454);
+    expect(secondBar.height).toBeCloseTo(150.86, 1);
+    expect(secondBar.y).toBeCloseTo(41.14, 1);
+    expect(secondBar.y).toBeGreaterThanOrEqual(CHART_PAD_TOP);
+    expect(secondBar.y + secondBar.height).toBeLessThanOrEqual(CHART_HEIGHT);
   });
 });

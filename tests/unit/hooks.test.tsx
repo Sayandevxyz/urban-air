@@ -1,9 +1,13 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { fetchApiJson } from "@/hooks/apiClient";
+import { fetchAirQuality, readCachedSnapshot } from "@/hooks/fetchAirQuality";
 import { useAirQualityData } from "@/hooks/useAirQualityData";
+import { useChat } from "@/hooks/useChat";
 import { useCityComparison } from "@/hooks/useCityComparison";
 import { useCitySearch } from "@/hooks/useCitySearch";
 import { useLocalAlerts } from "@/hooks/useLocalAlerts";
+import { useRoutineInputs } from "@/hooks/useRoutineInputs";
 import { getDemoAirQualityReport, getDemoCityLocations } from "@/services/demo-data";
 
 describe("custom client hooks", () => {
@@ -270,6 +274,23 @@ describe("custom client hooks", () => {
       result.current.clearResults();
     });
     expect(result.current.status).toBe("idle");
+
+    // Missing `results` key defaults to [] and AbortError resolves silently without overwriting status
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 }));
+    act(() => {
+      result.current.setQuery("NoResultsKey");
+    });
+    await waitFor(() => {
+      expect(result.current.status).toBe("empty");
+    });
+
+    fetchMock.mockRejectedValueOnce(new DOMException("aborted", "AbortError"));
+    act(() => {
+      result.current.setQuery("AbortedCity");
+    });
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
   });
 
   it("useLocalAlerts persists rules, toggles, deletes, and handles corrupt storage", () => {
@@ -338,9 +359,157 @@ describe("custom client hooks", () => {
     if (london) {
       act(() => {
         cmpDemo.current.addCity(london);
+        cmpDemo.current.addCity(london);
       });
       expect(cmpDemo.current.cities).toHaveLength(3);
       expect(cmpDemo.current.reports.london?.location.key).toBe("london");
+      const beijing = locations[4];
+      if (beijing) {
+        act(() => {
+          cmpDemo.current.addCity(beijing);
+        });
+        expect(cmpDemo.current.cities).toHaveLength(3);
+      }
     }
+  });
+
+  it("covers apiClient, fetchAirQuality, useChat, useRoutineInputs, and storage edge paths", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new DOMException("aborted", "AbortError"))),
+    );
+    const aborted = await fetchApiJson("/api/health");
+    expect(aborted).toEqual({ ok: false, kind: "aborted" });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(JSON.stringify("string-body"), { status: 429 }))),
+    );
+    const nonObject429 = await fetchApiJson("/api/geocode?q=Delhi");
+    expect(nonObject429).toEqual({ ok: false, kind: "rate_limited", retryAfterSeconds: 30 });
+
+    const delhiLoc = getDemoCityLocations()[0];
+    if (delhiLoc) {
+      const demoRes = await fetchAirQuality(delhiLoc, true);
+      expect(demoRes.ok).toBe(true);
+
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))),
+      );
+      const missingReport = await fetchAirQuality(delhiLoc, false);
+      expect(missingReport).toEqual({ ok: false, kind: "error", status: 502 });
+
+      // Transient geo-self-current location skips persistent snapshot storage
+      const geoLoc = { ...delhiLoc, key: "geo-self-current" };
+      const geoReport = { ...getDemoAirQualityReport("delhi"), location: geoLoc };
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(() =>
+          Promise.resolve(new Response(JSON.stringify({ report: geoReport }), { status: 200 })),
+        ),
+      );
+      window.localStorage.clear();
+      const geoRes = await fetchAirQuality(geoLoc, false);
+      expect(geoRes.ok).toBe(true);
+      expect(window.localStorage.getItem("urban-air:last-snapshot:v1")).toBeNull();
+
+      const locRes = await fetchAirQuality({ ...delhiLoc, key: "loc-2861-7721" }, false);
+      expect(locRes.ok).toBe(true);
+    }
+
+    window.localStorage.setItem("urban-air:last-snapshot:v1", JSON.stringify({ partial: true }));
+    expect(readCachedSnapshot()).toBeNull();
+    vi.spyOn(Storage.prototype, "getItem").mockImplementationOnce(() => {
+      throw new Error("storage blocked");
+    });
+    expect(readCachedSnapshot()).toBeNull();
+
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("quota exceeded");
+    });
+    const alertsReport = getDemoAirQualityReport("delhi");
+    const { result: alertsHook } = renderHook(() => useLocalAlerts({ delhi: alertsReport }));
+    act(() => {
+      alertsHook.current.addRule({
+        cityKey: "delhi",
+        cityName: "Delhi",
+        metric: "usAqi",
+        threshold: 80,
+      });
+    });
+    expect(alertsHook.current.rules.length).toBeGreaterThanOrEqual(1);
+    vi.restoreAllMocks();
+
+    const baseReport = getDemoAirQualityReport("delhi");
+    const sparseReport = {
+      ...baseReport,
+      location: { ...baseReport.location, country: "" },
+      hourly: [],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              reply: "Gemini grounded reply",
+              engine: "gemini",
+              refused: false,
+              dataSource: "Delhi (demo)",
+              updatedAtIso: "2026-11-26T08:00:00Z",
+              disclaimer: "Not medical advice",
+            }),
+            { status: 200 },
+          ),
+        ),
+      ),
+    );
+    const { result: chatHook } = renderHook(() =>
+      useChat(
+        sparseReport,
+        {
+          persona: "general",
+          commuteMode: "car",
+          homeEnergyMode: "gas_biomass",
+          filtrationMode: "none",
+        },
+        "en",
+        { errorReply: "err", fallbackBadge: "Fallback", liveLlmBadge: "Live Gemini" },
+      ),
+    );
+    await act(async () => {
+      await chatHook.current.submitQuestion("   ");
+    });
+    expect(chatHook.current.turns).toHaveLength(0);
+
+    await act(async () => {
+      await chatHook.current.submitQuestion("Check AQI now");
+    });
+    expect(chatHook.current.turns[1]?.meta).toContain("Live Gemini");
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new DOMException("aborted", "AbortError"))),
+    );
+    await act(async () => {
+      await chatHook.current.submitQuestion("Abort check");
+    });
+    expect(chatHook.current.errorText).toBeNull();
+
+    const { result: routineHook } = renderHook(() =>
+      useRoutineInputs(sparseReport, {
+        persona: "general",
+        commuteMode: "car",
+        homeEnergyMode: "gas_biomass",
+        filtrationMode: "none",
+      }),
+    );
+    act(() => {
+      routineHook.current.setCommuteDistanceKm(Number.NaN);
+      routineHook.current.setOutdoorHours(-5);
+    });
+    expect(routineHook.current.commuteDistanceKm).toBe(0);
+    expect(routineHook.current.outdoorHours).toBe(0);
   });
 });

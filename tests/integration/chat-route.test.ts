@@ -170,6 +170,14 @@ describe("integration: POST /api/chat", () => {
 
     mswServer.use(
       http.post("https://api.anthropic.com/v1/messages", () =>
+        HttpResponse.json({ content: [{ type: "tool_use" }] }),
+      ),
+    );
+    const antEmptyBlock = await postChat(makeChatReq(VALID_BODY));
+    expect(((await antEmptyBlock.json()) as { engine: string }).engine).toBe("fallback");
+
+    mswServer.use(
+      http.post("https://api.anthropic.com/v1/messages", () =>
         HttpResponse.json({ error: "down" }, { status: 503 }),
       ),
     );
@@ -178,6 +186,34 @@ describe("integration: POST /api/chat", () => {
 
     const badJson = await postChat(makeChatReq("{broken"));
     expect(badJson.status).toBe(400);
+
+    const badContentLen = new NextRequest("https://localhost:3000/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": "abc" },
+      body: JSON.stringify(VALID_BODY),
+    });
+    expect((await postChat(badContentLen)).status).toBe(400);
+
+    const declaredTooLarge = new NextRequest("https://localhost:3000/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": "999999" },
+      body: "{}",
+    });
+    expect((await postChat(declaredTooLarge)).status).toBe(413);
+
+    const declaredSmallOkLen = new NextRequest("https://localhost:3000/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": "100" },
+      body: JSON.stringify(VALID_BODY),
+    });
+    expect((await postChat(declaredSmallOkLen)).status).toBe(200);
+
+    const oversizedWithoutLength = new NextRequest("https://localhost:3000/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...VALID_BODY, message: "z".repeat(17_000) }),
+    });
+    expect((await postChat(oversizedWithoutLength)).status).toBe(413);
 
     const oversized = await postChat(makeChatReq({ ...VALID_BODY, message: "x".repeat(600) }));
     expect(oversized.status).toBe(400);

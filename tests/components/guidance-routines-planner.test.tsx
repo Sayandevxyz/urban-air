@@ -41,6 +41,7 @@ describe("GuidanceSection, ActivityPlanner, and RoutinesImpactSection", () => {
 
     await user.selectOptions(screen.getByLabelText(/Typical commute/i), "transit");
     await user.selectOptions(screen.getByLabelText(/Cooking & heating/i), "electric_induction");
+    fireEvent.change(screen.getByLabelText(/Household member/i), { target: { value: "unknown" } });
     expect(screen.getByLabelText(/Typical commute/i)).toHaveValue("transit");
 
     const results = await axe(container);

@@ -82,17 +82,46 @@ describe("AI assistant security, prompt injection defense, and grounding", () =>
       expect(response.engine).toBe("fallback");
       expect(response.reply).not.toContain("GEMINI_API_KEY");
     }
+
+    const benignBase64 = Buffer.from("Safe air quality outdoor running walk advice today").toString(
+      "base64",
+    );
+    expect(detectPromptInjection(sanitizeUserPrompt(`AQI check ${benignBase64}`))).toBe(false);
   });
 
-  it("strips disallowed URLs while preserving trusted official reference URLs", () => {
+  it("strips disallowed and malformed URLs while preserving trusted official reference URLs", () => {
     const env = parseEnv({ NODE_ENV: "test" });
     const cleaned = sanitizeAssistantOutput(
-      "Check https://open-meteo.com/en/docs and https://evil.attacker.example/phish for info.",
+      "Check https://open-meteo.com/en/docs https://evil.attacker.example/phish https://[::1 and https://user@invalid:port for info.",
       env,
     );
     expect(cleaned).toContain("https://open-meteo.com/en/docs");
     expect(cleaned).not.toContain("evil.attacker.example");
     expect(cleaned).toContain("[link removed]");
+  });
+
+  it("handles moderate fallback guidance cleanly without bestWindowIso", () => {
+    const moderateNoWindow: ChatRequestPayload = {
+      ...BASE_PAYLOAD,
+      airQualityContext: {
+        cityName: "Coimbatore",
+        country: "India",
+        source: "demo",
+        updatedAtIso: "2026-11-26T08:00:00Z",
+        usAqi: 65,
+        europeanAqi: 30,
+        readings: { pm25: 18, pm10: 36, no2: 20, o3: 45, so2: 10, co: 450 },
+      },
+    };
+    const indoorModerate = generateGroundedFallbackReply(
+      "Should I open windows indoors?",
+      moderateNoWindow,
+    );
+    expect(indoorModerate).toContain("air out briefly during the cleanest hour");
+
+    const overviewModerate = generateGroundedFallbackReply("How is air today?", moderateNoWindow);
+    expect(overviewModerate).toContain("Follow moderate outdoor pacing");
+    expect(overviewModerate).toContain("current level (US AQI 65)");
   });
 
   it("refuses off-topic non-air-quality questions safely", async () => {

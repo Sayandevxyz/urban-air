@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AirQualityChat } from "@/components/AirQualityChat";
 import { CityCompareSection } from "@/components/CityCompareSection";
 import { CitySearchBar } from "@/components/CitySearchBar";
-import { AppLocaleProvider } from "@/components/LocaleContext";
+import { AppLocaleProvider, useAppLocale } from "@/components/LocaleContext";
 import { StatusBanner } from "@/components/StatusBanner";
 import { ThresholdAlertsSection } from "@/components/ThresholdAlertsSection";
 import { UrbanAirWorkbench } from "@/components/UrbanAirWorkbench";
@@ -149,12 +149,7 @@ describe("Search, Compare, Alerts, StatusBanner, Chat, and Workbench", () => {
         <main>
           <StatusBanner state="loading" retryAfterSeconds={0} onRetry={onRetry} />
           <StatusBanner state="empty" retryAfterSeconds={0} onRetry={onRetry} />
-          <StatusBanner
-            state="offline"
-            updatedAtIso="2026-11-26T08:00:00Z"
-            retryAfterSeconds={0}
-            onRetry={onRetry}
-          />
+          <StatusBanner state="offline" retryAfterSeconds={0} onRetry={onRetry} />
           <StatusBanner state="rate_limited" retryAfterSeconds={42} onRetry={onRetry} />
           <StatusBanner state="error" retryAfterSeconds={0} onRetry={onRetry} />
         </main>
@@ -211,6 +206,14 @@ describe("Search, Compare, Alerts, StatusBanner, Chat, and Workbench", () => {
                 metric: "usAqi",
                 threshold: 100,
                 actualValue: 224,
+              },
+              {
+                ruleId: "r2",
+                cityKey: "delhi",
+                cityName: "Delhi",
+                metric: "pm25",
+                threshold: 60,
+                actualValue: 158,
               },
             ]}
             onAddRule={onAdd}
@@ -386,17 +389,45 @@ describe("Search, Compare, Alerts, StatusBanner, Chat, and Workbench", () => {
     expect(axeResults).toHaveNoViolations();
   });
 
-  it("toggles language and demo mode in Workbench, updates html lang, and passes axe", async () => {
+  it("toggles language, restores persisted locale from localStorage, and switches demo mode in Workbench", async () => {
     const user = userEvent.setup();
     cleanup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ report: getDemoAirQualityReport("delhi") }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        ),
+      ),
+    );
 
+    function OutsideProviderControl() {
+      const ctx = useAppLocale();
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            ctx.setLocale("en");
+          }}
+        >
+          outside-noop
+        </button>
+      );
+    }
+
+    render(<OutsideProviderControl />);
+    await user.click(screen.getByRole("button", { name: "outside-noop" }));
+    cleanup();
+
+    window.localStorage.setItem("urban-air:locale:v1", "hi");
     const { container } = render(
       <AppLocaleProvider>
         <UrbanAirWorkbench defaultDemoMode={true} />
       </AppLocaleProvider>,
     );
-
-    await user.selectOptions(screen.getByLabelText("Language"), "hi");
     await waitFor(() => {
       expect(document.documentElement.lang).toBe("hi");
       expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("शहरी वायु गुणवत्ता सहायक");
@@ -405,17 +436,31 @@ describe("Search, Compare, Alerts, StatusBanner, Chat, and Workbench", () => {
     await user.selectOptions(screen.getByLabelText("भाषा"), "ta");
     await waitFor(() => {
       expect(document.documentElement.lang).toBe("ta");
+      expect(screen.getByLabelText("மொழி")).toBeInTheDocument();
     });
 
     await user.selectOptions(screen.getByLabelText("மொழி"), "en");
     await waitFor(() => {
       expect(document.documentElement.lang).toBe("en");
+      expect(screen.getByLabelText("Language")).toBeInTheDocument();
     });
 
     await user.click(screen.getByRole("switch"));
-    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "false");
+    await waitFor(() => {
+      expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "false");
+    });
 
     const axeResults = await axe(container);
     expect(axeResults).toHaveNoViolations();
+
+    cleanup();
+    render(
+      <AppLocaleProvider>
+        <UrbanAirWorkbench defaultDemoMode={false} />
+      </AppLocaleProvider>,
+    );
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
+    });
   });
 });

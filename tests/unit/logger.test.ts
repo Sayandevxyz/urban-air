@@ -8,6 +8,7 @@ describe("logger and privacy redaction", () => {
   });
 
   it("redacts sensitive keys and coordinates in structured log context", () => {
+    expect(sanitizeLogContext(undefined)).toBeUndefined();
     const sanitized = sanitizeLogContext({
       apiKey: "secret-abc",
       latitude: 28.613939,
@@ -35,6 +36,13 @@ describe("logger and privacy redaction", () => {
     logger.info("visible", { lat: 11.0168 });
     expect(stdoutSpy).toHaveBeenCalledTimes(1);
     expect(String(stdoutSpy.mock.calls[0]?.[0])).toContain("11.02");
+
+    delete process.env.LOG_LEVEL;
+    const prevNodeEnv = process.env.NODE_ENV;
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
+    logger.info("prod-default-info");
+    expect(stdoutSpy).toHaveBeenCalledTimes(2);
+    (process.env as Record<string, string | undefined>).NODE_ENV = prevNodeEnv;
 
     if (prev === undefined) {
       delete process.env.LOG_LEVEL;

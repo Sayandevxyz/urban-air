@@ -104,7 +104,7 @@ export function CitySearchBar({
   onUseMyLocation,
 }: CitySearchBarProps) {
   const t = useTranslations("search");
-  const { query, setQuery, results, status, retryAfterSeconds, clearResults } =
+  const { query, setQuery, setSelectedQueryLabel, results, status, retryAfterSeconds } =
     useCitySearch(demoMode);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
   const [open, setOpen] = useState(false);
@@ -113,10 +113,9 @@ export function CitySearchBar({
   const activeOption = activeIndex >= 0 ? results[activeIndex] : undefined;
 
   const chooseCity = (city: CityLocation) => {
-    setQuery(`${city.name}${city.country ? `, ${city.country}` : ""}`);
+    setSelectedQueryLabel(`${city.name}${city.country ? `, ${city.country}` : ""}`);
     setOpen(false);
     setActiveIndex(-1);
-    clearResults();
     onSelectCity(city);
   };
 

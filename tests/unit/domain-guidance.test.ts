@@ -164,6 +164,71 @@ describe("domain/guidance", () => {
       hourly: HOURLY_SAMPLE,
     });
     expect(asthmaUnhealthy.outdoorAdvice).toBe("avoid_outdoors");
+
+    const boundary50Sensitive = buildPersonaGuidance({
+      usAqi: 50,
+      smog: assessWinterSmog(50, CLEAN_READINGS),
+      readings: { ...CLEAN_READINGS, o3: 99 },
+      profile: { ...BASE_PROFILE, persona: "children" },
+      hourly: HOURLY_SAMPLE,
+    });
+    expect(boundary50Sensitive.maskAdvice).toBe("none_needed");
+    expect(boundary50Sensitive.windowsAdvice).toBe("open_cross_ventilation");
+    expect(boundary50Sensitive.checklistKeys).not.toContain("ozone_avoid_afternoon_peak");
+
+    const boundary51 = buildPersonaGuidance({
+      usAqi: 51,
+      smog: assessWinterSmog(51, CLEAN_READINGS),
+      readings: { ...CLEAN_READINGS, o3: 100 },
+      profile: { ...BASE_PROFILE, persona: "children" },
+      hourly: HOURLY_SAMPLE,
+    });
+    expect(boundary51.maskAdvice).toBe("optional_sensitive");
+    expect(boundary51.windowsAdvice).toBe("brief_clean_window");
+    expect(boundary51.highSensitivityWarning).toBe(false);
+    expect(boundary51.checklistKeys).toContain("ozone_avoid_afternoon_peak");
+
+    const boundary101General = buildPersonaGuidance({
+      usAqi: 101,
+      smog: assessWinterSmog(101, CLEAN_READINGS),
+      readings: CLEAN_READINGS,
+      profile: BASE_PROFILE,
+      hourly: HOURLY_SAMPLE,
+    });
+    expect(boundary101General.maskAdvice).toBe("n95_recommended");
+    expect(boundary101General.highSensitivityWarning).toBe(false);
+
+    const boundary150General = buildPersonaGuidance({
+      usAqi: 150,
+      smog: assessWinterSmog(150, CLEAN_READINGS),
+      readings: CLEAN_READINGS,
+      profile: BASE_PROFILE,
+      hourly: HOURLY_SAMPLE,
+    });
+    expect(boundary150General.maskAdvice).toBe("n95_recommended");
+    expect(boundary150General.windowsAdvice).toBe("brief_clean_window");
+    expect(boundary150General.highSensitivityWarning).toBe(false);
+
+    const boundary151General = buildPersonaGuidance({
+      usAqi: 151,
+      smog: assessWinterSmog(151, CLEAN_READINGS),
+      readings: CLEAN_READINGS,
+      profile: BASE_PROFILE,
+      hourly: HOURLY_SAMPLE,
+    });
+    expect(boundary151General.maskAdvice).toBe("n95_required");
+    expect(boundary151General.windowsAdvice).toBe("keep_sealed");
+    expect(boundary151General.outdoorAdvice).toBe("shift_indoors");
+    expect(boundary151General.highSensitivityWarning).toBe(true);
+
+    const boundary201General = buildPersonaGuidance({
+      usAqi: 201,
+      smog: assessWinterSmog(201, SEVERE_READINGS),
+      readings: SEVERE_READINGS,
+      profile: BASE_PROFILE,
+      hourly: HOURLY_SAMPLE,
+    });
+    expect(boundary201General.outdoorAdvice).toBe("avoid_outdoors");
   });
 
   it("handles empty hourly forecast gracefully for clean window selection", () => {
@@ -186,25 +251,43 @@ describe("domain/guidance", () => {
     expect(noFilterHacks.map((h) => h.id)).toContain("exhaust_or_induction_cook");
 
     const hepaModerate = buildIndoorAirHacks(
-      85,
-      assessWinterSmog(85, CLEAN_READINGS),
-      CLEAN_READINGS,
+      100,
+      assessWinterSmog(100, { ...CLEAN_READINGS, no2: 39 }),
+      { ...CLEAN_READINGS, no2: 39 },
       {
         ...BASE_PROFILE,
         filtrationMode: "hepa",
         homeEnergyMode: "electric_induction",
       },
     );
-    expect(hepaModerate.map((h) => h.id)).toContain("run_hepa_filtration");
-    expect(hepaModerate.map((h) => h.id)).not.toContain("build_diy_box_filter");
-    expect(hepaModerate.find((h) => h.id === "run_hepa_filtration")?.priority).toBe("high");
+    expect(hepaModerate).toEqual([
+      { id: "timed_window_purge", priority: "standard" },
+      { id: "run_hepa_filtration", priority: "high" },
+      { id: "wet_mop_dust", priority: "standard" },
+      { id: "stop_indoor_combustion", priority: "standard" },
+    ]);
 
-    const hepaSevere = buildIndoorAirHacks(210, severeSmog, SEVERE_READINGS, {
+    const boundary101 = buildIndoorAirHacks(
+      101,
+      assessWinterSmog(101, { ...CLEAN_READINGS, no2: 40 }),
+      { ...CLEAN_READINGS, no2: 40 },
+      {
+        ...BASE_PROFILE,
+        filtrationMode: "hepa",
+        homeEnergyMode: "electric_induction",
+      },
+    );
+    expect(boundary101.find((h) => h.id === "run_hepa_filtration")?.priority).toBe("critical");
+    expect(boundary101.find((h) => h.id === "exhaust_or_induction_cook")?.priority).toBe("high");
+    expect(boundary101.find((h) => h.id === "stop_indoor_combustion")?.priority).toBe("high");
+
+    const hepaSevere = buildIndoorAirHacks(151, severeSmog, SEVERE_READINGS, {
       ...BASE_PROFILE,
       filtrationMode: "hepa",
       homeEnergyMode: "electric_induction",
     });
     expect(hepaSevere.find((h) => h.id === "run_hepa_filtration")?.priority).toBe("critical");
+    expect(hepaSevere.find((h) => h.id === "seal_smog_drafts")?.priority).toBe("critical");
 
     const cleanSmog = assessWinterSmog(30, CLEAN_READINGS);
     const cleanHacks = buildIndoorAirHacks(30, cleanSmog, CLEAN_READINGS, {
@@ -213,5 +296,7 @@ describe("domain/guidance", () => {
       homeEnergyMode: "electric_induction",
     });
     expect(cleanHacks.map((h) => h.id)).toContain("timed_window_purge");
+    expect(cleanHacks.find((h) => h.id === "wet_mop_dust")?.priority).toBe("standard");
+    expect(cleanHacks.find((h) => h.id === "build_diy_box_filter")?.priority).toBe("high");
   });
 });

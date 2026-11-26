@@ -51,6 +51,13 @@ jobs:
       - name: Run full verification gate
         run: npm run verify
 
+      - name: Verify test suite repeatability (3 consecutive runs)
+        run: |
+          for i in 1 2 3; do
+            echo "Repeatability pass $i/3"
+            npm run test
+          done
+
       - name: Install Playwright Chromium for E2E & a11y
         run: npx playwright install chromium --with-deps
 

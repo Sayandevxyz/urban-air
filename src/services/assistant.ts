@@ -43,24 +43,25 @@ const anthropicResponseSchema = z.object({
   content: z.array(z.object({ type: z.string(), text: z.string().optional() })).optional(),
 });
 
-async function tryGeminiLlm(
-  env: ValidatedEnv,
-  systemInstruction: string,
-  userEnvelope: string,
-  signal?: AbortSignal,
-): Promise<string | undefined> {
-  if (!env.GEMINI_API_KEY) return undefined;
+interface LlmCallParams {
+  readonly apiKey: string;
+  readonly systemInstruction: string;
+  readonly userEnvelope: string;
+  readonly signal?: AbortSignal | undefined;
+}
+
+async function tryGeminiLlm(env: ValidatedEnv, params: LlmCallParams): Promise<string | undefined> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(env.GEMINI_MODEL)}:generateContent`;
   const result = await fetchJsonWithGuard(url, geminiResponseSchema, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+    headers: { "Content-Type": "application/json", "x-goog-api-key": params.apiKey },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemInstruction }] },
-      contents: [{ role: "user", parts: [{ text: userEnvelope }] }],
+      systemInstruction: { parts: [{ text: params.systemInstruction }] },
+      contents: [{ role: "user", parts: [{ text: params.userEnvelope }] }],
       generationConfig: { temperature: 0.2, maxOutputTokens: MAX_LLM_OUTPUT_TOKENS },
     }),
     timeoutMs: LLM_TIMEOUT_MS,
-    signal,
+    signal: params.signal,
   });
   if (!result.ok) {
     logger.warn("Gemini call failed, falling back to grounded rules", { code: result.error.code });
@@ -72,11 +73,8 @@ async function tryGeminiLlm(
 
 async function tryAnthropicLlm(
   env: ValidatedEnv,
-  systemInstruction: string,
-  userEnvelope: string,
-  signal?: AbortSignal,
+  params: LlmCallParams,
 ): Promise<string | undefined> {
-  if (!env.ANTHROPIC_API_KEY) return undefined;
   const result = await fetchJsonWithGuard(
     "https://api.anthropic.com/v1/messages",
     anthropicResponseSchema,
@@ -84,17 +82,17 @@ async function tryAnthropicLlm(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": env.ANTHROPIC_API_KEY,
+        "x-api-key": params.apiKey,
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
         model: env.ANTHROPIC_MODEL,
         max_tokens: MAX_LLM_OUTPUT_TOKENS,
-        system: systemInstruction,
-        messages: [{ role: "user", content: userEnvelope }],
+        system: params.systemInstruction,
+        messages: [{ role: "user", content: params.userEnvelope }],
       }),
       timeoutMs: LLM_TIMEOUT_MS,
-      signal,
+      signal: params.signal,
     },
   );
   if (!result.ok) {
@@ -115,12 +113,22 @@ async function selectConfiguredLlmReply(
 ): Promise<{ engine: "gemini" | "anthropic"; rawText: string } | undefined> {
   const allowGemini = env.LLM_PROVIDER === "gemini" || env.LLM_PROVIDER === "auto";
   if (allowGemini && env.GEMINI_API_KEY) {
-    const rawText = await tryGeminiLlm(env, systemInstruction, userEnvelope, signal);
+    const rawText = await tryGeminiLlm(env, {
+      apiKey: env.GEMINI_API_KEY,
+      systemInstruction,
+      userEnvelope,
+      signal,
+    });
     if (rawText) return { engine: "gemini", rawText };
   }
   const allowAnthropic = env.LLM_PROVIDER === "anthropic" || env.LLM_PROVIDER === "auto";
   if (allowAnthropic && env.ANTHROPIC_API_KEY) {
-    const rawText = await tryAnthropicLlm(env, systemInstruction, userEnvelope, signal);
+    const rawText = await tryAnthropicLlm(env, {
+      apiKey: env.ANTHROPIC_API_KEY,
+      systemInstruction,
+      userEnvelope,
+      signal,
+    });
     if (rawText) return { engine: "anthropic", rawText };
   }
   return undefined;

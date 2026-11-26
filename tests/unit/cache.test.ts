@@ -72,14 +72,22 @@ describe("SwrMemoryCache", () => {
     now += 25_000;
     await cache.getOrFetch("b", policy, () => Promise.resolve("B2"));
 
-    // Background revalidation error is logged safely without crashing caller
+    // Background revalidation error is logged safely and deduplicates concurrent stale requests
     const errPolicy = { ttlMs: 1_000, staleTtlMs: 5_000 };
     await cache.getOrFetch("bg", errPolicy, () => Promise.resolve("ok"));
     now += 2_000;
-    const staleWhileErr = await cache.getOrFetch("bg", errPolicy, () =>
-      Promise.reject(new Error("bg fail")),
-    );
-    expect(staleWhileErr).toBe("ok");
+    let rejectBg!: (err: Error) => void;
+    const bgPromise = new Promise<string>((_resolve, reject) => {
+      rejectBg = reject;
+    });
+    const bgFetcher = vi.fn(() => bgPromise);
+    const stale1 = await cache.getOrFetch("bg", errPolicy, bgFetcher);
+    const stale2 = await cache.getOrFetch("bg", errPolicy, bgFetcher);
+    expect(stale1).toBe("ok");
+    expect(stale2).toBe("ok");
+    expect(bgFetcher).toHaveBeenCalledTimes(1);
+    rejectBg(new Error("bg fail"));
+    await Promise.resolve();
 
     cache.clear();
     expect(cache.size()).toBe(0);

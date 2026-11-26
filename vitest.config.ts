@@ -29,11 +29,17 @@ export default defineConfig({
         "src/i18n/messages/*.json",
       ],
       thresholds: {
-        lines: 90,
-        branches: 90,
-        functions: 90,
-        statements: 90,
+        lines: 97,
+        branches: 95,
+        functions: 97,
+        statements: 97,
         "src/domain/**/*.ts": {
+          lines: 100,
+          branches: 100,
+          functions: 100,
+          statements: 100,
+        },
+        "src/lib/**/*.ts": {
           lines: 100,
           branches: 100,
           functions: 100,

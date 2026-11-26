@@ -105,6 +105,70 @@ describe("services edge cases, middleware, and RSC entry", () => {
       { signal: preAborted.signal },
     );
     expect(preRes.ok).toBe(false);
+
+    // Null stream fallback reading text() with oversize check & 429 without Retry-After header
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          body: null,
+          text: () => Promise.resolve("x".repeat(128)),
+        } as unknown as Response),
+      ),
+    );
+    const noStreamTooLarge = await fetchJsonWithGuard(
+      "https://air-quality-api.open-meteo.com/v1/air-quality",
+      z.object({}),
+      { maxBytes: 32 },
+    );
+    expect(noStreamTooLarge.ok).toBe(false);
+    if (!noStreamTooLarge.ok) {
+      expect(noStreamTooLarge.error.code).toBe("PAYLOAD_TOO_LARGE");
+    }
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          body: null,
+          text: () => Promise.resolve('{"ok":true}'),
+        } as unknown as Response),
+      ),
+    );
+    const noStreamOk = await fetchJsonWithGuard(
+      "https://air-quality-api.open-meteo.com/v1/air-quality",
+      z.object({ ok: z.boolean() }),
+    );
+    expect(noStreamOk.ok).toBe(true);
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(null, { status: 429 }))),
+    );
+    const default429 = await fetchJsonWithGuard(
+      "https://air-quality-api.open-meteo.com/v1/air-quality",
+      z.object({}),
+    );
+    expect(default429.ok).toBe(false);
+    if (!default429.ok) {
+      expect(default429.error.retryAfterSeconds).toBe(60);
+    }
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(JSON.stringify({ wrong: true }), { status: 200 }))),
+    );
+    const schemaMismatch = await fetchJsonWithGuard(
+      "https://air-quality-api.open-meteo.com/v1/air-quality",
+      z.object({ ok: z.boolean() }),
+    );
+    expect(schemaMismatch.ok).toBe(false);
   });
 
   it("demo-data searches empty query and resolves closest seeded city for custom coords", () => {

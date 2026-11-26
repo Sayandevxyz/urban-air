@@ -71,6 +71,22 @@ describe("domain/alerts", () => {
         actualValue: 245,
       },
     ]);
+
+    expect(
+      evaluateThresholdAlerts(
+        [
+          {
+            id: "eq-boundary",
+            cityKey: "delhi",
+            cityName: "Delhi",
+            metric: "usAqi",
+            threshold: 245,
+            enabled: true,
+          },
+        ],
+        { delhi: SAMPLE_REPORT },
+      ),
+    ).toEqual([]);
   });
 
   it("evaluates pm25 metric alerts when breached", () => {

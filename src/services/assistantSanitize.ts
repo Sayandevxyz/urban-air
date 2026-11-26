@@ -68,13 +68,9 @@ export function sanitizeUserPrompt(rawMessage: string): string {
 function containsEncodedInjection(cleanedMessage: string): boolean {
   const candidates = cleanedMessage.match(BASE64_INJECTION_CHUNK) ?? [];
   for (const token of candidates) {
-    try {
-      const decoded = Buffer.from(token, "base64").toString("utf8");
-      if (INJECTION_PATTERNS.some((pattern) => pattern.test(decoded))) {
-        return true;
-      }
-    } catch {
-      // Ignore malformed candidate tokens.
+    const decoded = Buffer.from(token, "base64").toString("utf8");
+    if (INJECTION_PATTERNS.some((pattern) => pattern.test(decoded))) {
+      return true;
     }
   }
   return false;

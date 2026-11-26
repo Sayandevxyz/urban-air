@@ -5,13 +5,14 @@ test.describe("Urban Air Quality Assistant E2E flow", () => {
     page,
   }) => {
     const consoleErrors: string[] = [];
+    const pageErrors: string[] = [];
     page.on("console", (msg) => {
       if (msg.type() === "error") {
         consoleErrors.push(msg.text());
       }
     });
     page.on("pageerror", (err) => {
-      consoleErrors.push(err.message);
+      pageErrors.push(err.message);
     });
 
     const cspViolations: string[] = [];
@@ -87,10 +88,12 @@ test.describe("Urban Air Quality Assistant E2E flow", () => {
     await page.getByRole("button", { name: "Add city", exact: true }).click();
     await expect(page.locator("#compare")).toContainText("London");
 
-    // 7. Language toggle (Hindi -> Tamil -> English)
+    // 7. Language toggle persistence across full reload (Hindi -> reload -> Tamil -> English)
     await page.getByLabel("Language").selectOption("hi");
     await expect(page.locator("html")).toHaveAttribute("lang", "hi");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("शहरी वायु गुणवत्ता सहायक");
+    await page.reload({ waitUntil: "networkidle" });
+    await expect(page.locator("html")).toHaveAttribute("lang", "hi");
 
     await page.getByLabel("भाषा").selectOption("ta");
     await expect(page.locator("html")).toHaveAttribute("lang", "ta");
@@ -100,8 +103,57 @@ test.describe("Urban Air Quality Assistant E2E flow", () => {
 
     await page.getByLabel("மொழி").selectOption("en");
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    expect(consoleErrors).toEqual([]);
 
-    // 8. Check zero horizontal overflow at 320px viewport
+    // 8. Check 429 rate-limited banner and cached offline snapshot resilience in Live Mode
+    let mode: "ok" | "rate_limit" | "offline_err" = "ok";
+    await page.route("**/api/air-quality*", async (route) => {
+      if (mode === "rate_limit") {
+        await route.fulfill({
+          status: 429,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "RATE_LIMITED", retryAfterSeconds: 22 } }),
+        });
+        return;
+      }
+      if (mode === "offline_err") {
+        await route.abort("failed");
+        return;
+      }
+      const demoResp = await route.fetch({
+        url: route.request().url().replace("demo=false", "demo=true"),
+      });
+      await route.fulfill({ response: demoResp });
+    });
+
+    await page.getByRole("switch").click();
+    await expect(page.getByRole("switch")).toHaveAttribute("aria-checked", "false");
+    await expect(page.locator("#dashboard-heading")).toContainText("Delhi");
+    await expect
+      .poll(() => page.evaluate(() => window.localStorage.getItem("urban-air:last-snapshot:v1")))
+      .not.toBeNull();
+
+    mode = "offline_err";
+    await page.getByRole("button", { name: "Coimbatore", exact: true }).click();
+    await expect(
+      page.locator('[role="status"]').filter({ hasText: /Offline mode/i }),
+    ).toBeVisible();
+
+    mode = "rate_limit";
+    await page.getByRole("button", { name: "Mumbai", exact: true }).click();
+    const rateBanner = page
+      .locator('[role="alert"]')
+      .filter({ hasText: /Too many requests right now/i });
+    await expect(rateBanner).toBeVisible();
+    await expect(rateBanner).toContainText("22 seconds");
+    await page.unroute("**/api/air-quality*");
+
+    // Switch back to Demo Mode so desktop/mobile view check finishes cleanly
+    await page.getByRole("switch").click();
+    await expect(page.getByRole("switch")).toHaveAttribute("aria-checked", "true");
+    await expect(page.locator("#dashboard-heading")).toContainText("Mumbai");
+
+    // 9. Check zero horizontal overflow at 320px viewport
     await page.setViewportSize({ width: 320, height: 640 });
     const hasOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -110,7 +162,7 @@ test.describe("Urban Air Quality Assistant E2E flow", () => {
 
     const recordedViolations = await page.evaluate(() => window.__cspViolations ?? []);
     expect([...cspViolations, ...recordedViolations]).toEqual([]);
-    expect(consoleErrors).toEqual([]);
+    expect(pageErrors).toEqual([]);
   });
 });
 

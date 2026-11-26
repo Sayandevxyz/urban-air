@@ -29,10 +29,15 @@ describe("env validation", () => {
     ).toThrow(AppError);
   });
 
-  it("rejects HTTP (non-HTTPS) upstream URLs", () => {
+  it("rejects HTTP (non-HTTPS) and malformed upstream URLs", () => {
     expect(() =>
       parseEnv({
         OPEN_METEO_GEOCODING_BASE_URL: "http://geocoding-api.open-meteo.com/v1",
+      }),
+    ).toThrow(AppError);
+    expect(() =>
+      parseEnv({
+        OPEN_METEO_AIR_QUALITY_BASE_URL: "not-a-valid-url",
       }),
     ).toThrow(AppError);
   });
