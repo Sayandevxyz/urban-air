@@ -2,18 +2,26 @@
 
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
-import { ActivityPlanner } from "@/components/ActivityPlanner";
 import { AppFooter } from "@/components/AppFooter";
 import { AppHeader } from "@/components/AppHeader";
 import { AqiDashboard } from "@/components/AqiDashboard";
 import { CitySearchBar } from "@/components/CitySearchBar";
 import { GuidanceSection } from "@/components/GuidanceSection";
 import { StatusBanner } from "@/components/StatusBanner";
-import { ThresholdAlertsSection } from "@/components/ThresholdAlertsSection";
 import type { AirQualityReport, ResidentProfile } from "@/domain/types";
 import { useAirQualityData } from "@/hooks/useAirQualityData";
 import { useCityComparison } from "@/hooks/useCityComparison";
 import { useLocalAlerts } from "@/hooks/useLocalAlerts";
+
+const ActivityPlanner = dynamic(
+  () => import("@/components/ActivityPlanner").then((m) => m.ActivityPlanner),
+  { ssr: true },
+);
+
+const ThresholdAlertsSection = dynamic(
+  () => import("@/components/ThresholdAlertsSection").then((m) => m.ThresholdAlertsSection),
+  { ssr: true },
+);
 
 const ForecastSection = dynamic(
   () => import("@/components/ForecastSection").then((m) => m.ForecastSection),
