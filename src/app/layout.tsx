@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import type { ReactNode } from "react";
+import { AppLocaleProvider } from "@/components/LocaleContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,15 +16,21 @@ export const viewport: Viewport = {
 };
 
 /**
- * Root HTML document shell declaring responsive viewport and theme support.
+ * Root HTML document shell reading CSP nonce and providing localized client context.
  */
-export default function RootLayout({ children }: { readonly children: ReactNode }) {
+export default async function RootLayout({ children }: { readonly children: ReactNode }) {
+  const headerStore = await headers();
+  const nonce = headerStore.get("x-nonce") ?? undefined;
+
   return (
     <html lang="en">
       <head>
         <meta name="color-scheme" content="light dark" />
+        {nonce ? <meta name="csp-nonce" content={nonce} /> : null}
       </head>
-      <body className="min-h-dvh bg-surface text-ink antialiased">{children}</body>
+      <body className="min-h-dvh bg-surface text-ink antialiased">
+        <AppLocaleProvider>{children}</AppLocaleProvider>
+      </body>
     </html>
   );
 }

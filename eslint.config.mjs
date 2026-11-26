@@ -69,7 +69,7 @@ const eslintConfig = tseslint.config(
       "jsx-a11y/aria-proptypes": "error",
       "jsx-a11y/aria-role": "error",
       "jsx-a11y/label-has-associated-control": "error",
-      "jsx-a11y/no-noninteractive-tabindex": "error",
+      "jsx-a11y/no-noninteractive-tabindex": ["error", { roles: ["tabpanel", "region"] }],
       "security/detect-object-injection": "off",
     },
   },

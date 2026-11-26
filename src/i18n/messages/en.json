@@ -1,0 +1,369 @@
+{
+  "app": {
+    "title": "Urban Air Quality Assistant",
+    "subtitle": "Navigate winter smog and urban air pollution with local guidance, indoor air hacks, and low-emission routines.",
+    "skipLink": "Skip to main content",
+    "navLabel": "Section navigation",
+    "demoModeToggle": "Demo mode",
+    "demoModeOn": "Demo data active",
+    "demoModeOff": "Live Open-Meteo",
+    "languageLabel": "Language",
+    "navDashboard": "Live AQI",
+    "navForecast": "Forecast",
+    "navGuidance": "Health & Hacks",
+    "navRoutines": "Routines & Impact",
+    "navAssistant": "AI Assistant",
+    "navCompare": "Compare",
+    "navAlerts": "Alerts",
+    "footerNote": "Air quality telemetry via Open-Meteo (CC BY 4.0) and WHO 2021 guidelines. Zero tracking; coordinates are never saved.",
+    "disclaimerShort": "Informational guidance only — not medical advice. Consult a doctor for breathing emergencies."
+  },
+  "search": {
+    "heading": "Find your city or local air",
+    "inputLabel": "Search city",
+    "inputHint": "Type at least 2 letters, then use arrow keys and Enter to choose a city.",
+    "inputPlaceholder": "Try Delhi, Coimbatore, London...",
+    "useLocation": "Use my location",
+    "locating": "Finding location...",
+    "locationDenied": "Location permission was blocked. Select a featured city or search by name instead.",
+    "locationUnavailable": "Could not read device location. Please search your city by name.",
+    "searching": "Searching matching cities...",
+    "noResults": "No matching cities found. Try a nearby major city or switch to Demo mode.",
+    "emptyPrompt": "Search any city above or pick a preset city below to inspect live conditions.",
+    "quickCitiesLabel": "Featured cities",
+    "listboxLabel": "Matching cities"
+  },
+  "status": {
+    "loadingTitle": "Loading air quality report...",
+    "loadingBody": "Fetching current pollutants and 48-hour forecast in parallel.",
+    "emptyTitle": "No city selected yet",
+    "emptyBody": "Search for a city or use your current location to load air quality data and action advice.",
+    "errorTitle": "Unable to load live air quality data",
+    "errorRetry": "Try again",
+    "offlineTitle": "Offline mode — showing last saved snapshot",
+    "offlineBody": "Network is unavailable. Displaying cached data recorded at {timestamp}.",
+    "rateLimitedTitle": "Too many requests right now",
+    "rateLimitedBody": "Please wait {seconds} seconds before requesting fresh data, or switch to Demo mode."
+  },
+  "dashboard": {
+    "sectionTitle": "Live Air Quality Overview",
+    "usAqiLabel": "US AQI",
+    "euAqiLabel": "European AQI",
+    "dominantPollutant": "Main pollutant",
+    "updatedAt": "Updated",
+    "sourceOpenMeteo": "Live Open-Meteo",
+    "sourceDemo": "Demo Seeded Data",
+    "sourceCached": "Offline Cached Snapshot",
+    "smogAlertEmergencyTitle": "Severe Winter Smog Emergency",
+    "smogAlertSevereTitle": "Winter Smog & Pollution Trap Warning",
+    "smogAlertBody": "Fine particles and traffic gases are trapped near street level. Keep windows closed, use an N95 mask outdoors, and shift travel to cleaner hours.",
+    "inversionNote": "High PM2.5 + NO2 pattern indicates stagnant urban inversion conditions.",
+    "categories": {
+      "good": "Good",
+      "moderate": "Moderate",
+      "sensitive": "Unhealthy for Sensitive Groups",
+      "unhealthy": "Unhealthy",
+      "very_unhealthy": "Very Unhealthy",
+      "hazardous": "Hazardous"
+    },
+    "euBands": {
+      "good": "Good",
+      "fair": "Fair",
+      "moderate": "Moderate",
+      "poor": "Poor",
+      "very_poor": "Very Poor",
+      "extremely_poor": "Extremely Poor"
+    }
+  },
+  "pollutants": {
+    "sectionTitle": "Pollutant Breakdown vs. WHO 2021 Guidelines",
+    "sectionDesc": "Measured concentrations in micrograms per cubic meter (µg/m³) compared with World Health Organization 24-hour/8-hour limits.",
+    "whoLimitLabel": "WHO 2021 limit: {limit} µg/m³",
+    "whoRatioText": "{ratio}× WHO limit",
+    "exceedsWho": "Above WHO guideline",
+    "withinWho": "Within WHO guideline",
+    "unitUgM3": "µg/m³",
+    "items": {
+      "pm25": {
+        "name": "PM2.5 (Fine Particles)",
+        "shortDesc": "Tiny soot and smoke droplets that reach deep into lungs and bloodstream.",
+        "sources": "Vehicle exhaust, winter wood/coal smoke, crop burning, dust"
+      },
+      "pm10": {
+        "name": "PM10 (Coarse Dust)",
+        "shortDesc": "Dust and soot particles that irritate nose, throat, and airways.",
+        "sources": "Road dust, construction sites, winter haze"
+      },
+      "no2": {
+        "name": "NO2 (Nitrogen Dioxide)",
+        "shortDesc": "Traffic gas that inflames airways and triggers asthma flare-ups.",
+        "sources": "Diesel trucks, cars, power plants, indoor gas stoves"
+      },
+      "o3": {
+        "name": "O3 (Ground-Level Ozone)",
+        "shortDesc": "Afternoon sun reacts with exhaust to form lung-irritating smog.",
+        "sources": "Sunlight + vehicle/fuel vapors (peaks in afternoon)"
+      },
+      "so2": {
+        "name": "SO2 (Sulfur Dioxide)",
+        "shortDesc": "Sharp gas that tightens airways, especially for people with asthma.",
+        "sources": "Coal/oil boilers, heavy diesel, industrial plants"
+      },
+      "co": {
+        "name": "CO (Carbon Monoxide)",
+        "shortDesc": "Colorless gas that reduces oxygen carried in your blood.",
+        "sources": "Idling traffic, poorly vented heaters, solid-fuel stoves"
+      }
+    }
+  },
+  "forecast": {
+    "sectionTitle": "48-Hour Forecast & 7-Day Trend",
+    "hourlyTab": "48-Hour Forecast",
+    "dailyTab": "7-Day Trend",
+    "showTable": "Show data table",
+    "showChart": "Show chart",
+    "hourlyChartLabel": "48-hour US AQI forecast chart for {city}, ranging from {min} to {max}.",
+    "dailyChartLabel": "7-day US AQI daily average chart for {city}.",
+    "tableTime": "Time (UTC)",
+    "tableUsAqi": "US AQI",
+    "tableEuAqi": "EU AQI",
+    "tablePm25": "PM2.5 (µg/m³)",
+    "tableNo2": "NO2 (µg/m³)",
+    "tableO3": "O3 (µg/m³)",
+    "tableDate": "Date",
+    "tableAvgAqi": "Avg US AQI",
+    "tableRangeAqi": "Min–Max US AQI",
+    "tableCaptionHourly": "48-hour hourly air quality forecast",
+    "tableCaptionDaily": "7-day daily air quality trend"
+  },
+  "guidance": {
+    "sectionTitle": "Family Health Guidance & Indoor Air Quality Hacks",
+    "profileLegend": "Tailor advice to your household and lifestyle",
+    "personaLabel": "Household member / persona",
+    "commuteLabel": "Typical commute",
+    "energyLabel": "Cooking & heating",
+    "filtrationLabel": "Indoor air cleaner",
+    "personas": {
+      "general": "General Adult / Family",
+      "children": "Children & Schoolkids",
+      "elderly": "Older Adults (65+)",
+      "asthma": "Asthma / Respiratory",
+      "pregnant": "Pregnant Individuals",
+      "athlete": "Outdoor Athletes",
+      "worker": "Outdoor Workers"
+    },
+    "commutes": {
+      "car": "Solo Car / Taxi",
+      "transit": "Bus / Metro / Train",
+      "two_wheeler": "Scooter / Motorbike",
+      "walk_cycle": "Walk / Cycle"
+    },
+    "energies": {
+      "gas_biomass": "Gas / Wood / Biomass",
+      "electric_induction": "Electric / Induction"
+    },
+    "filtrations": {
+      "none": "No Air Purifier",
+      "hepa": "HEPA Air Purifier",
+      "diy_box_fan": "DIY Box-Fan Filter"
+    },
+    "maskCardTitle": "Mask guidance",
+    "windowsCardTitle": "Windows & ventilation",
+    "outdoorCardTitle": "Outdoor activity",
+    "maskAdvice": {
+      "none_needed": "No mask needed today for normal outdoor errands.",
+      "optional_sensitive": "Optional well-fitted mask if you feel airway irritation near traffic.",
+      "n95_recommended": "Wear a snug N95/FFP2 mask on outdoor trips and busy roads.",
+      "n95_required": "Wear a fit-checked N95/FFP2 mask outdoors; cloth/surgical masks do not block PM2.5 smog."
+    },
+    "windowsAdvice": {
+      "open_cross_ventilation": "Safe to open windows for fresh cross-ventilation.",
+      "brief_clean_window": "Keep windows closed during rush-hour haze; air out briefly during the cleanest afternoon window.",
+      "keep_sealed": "Keep windows and outer doors closed to block severe smog infiltration."
+    },
+    "outdoorAdvice": {
+      "normal_outdoor": "Great air for normal outdoor play, walking, and exercise.",
+      "pace_outdoors": "Take shorter breaks outdoors and avoid heavy breathing next to busy roads.",
+      "shift_indoors": "Move vigorous workouts indoors and limit outdoor exposure for sensitive family members.",
+      "avoid_outdoors": "Stay indoors as much as possible; cancel outdoor sports and protect children and elders."
+    },
+    "cleanestWindowNote": "Cleanest forecast hour: {time}",
+    "checklistTitle": "Immediate protective checklist",
+    "checklist": {
+      "smog_check_seal": "Seal window gaps with damp towels or weatherstripping during evening smog buildup.",
+      "smog_n95_fit": "Pinch the nose bridge on N95/FFP2 masks so polluted air cannot leak around edges.",
+      "sensitive_keep_reliever_ready": "Keep prescribed rescue inhalers and emergency contacts within reach.",
+      "ozone_avoid_afternoon_peak": "Avoid vigorous outdoor runs during peak afternoon ozone hours.",
+      "hydrate_and_monitor": "Drink water regularly and watch local hourly AQI changes before stepping out."
+    },
+    "indoorHacksTitle": "Practical Indoor Air Quality Hacks",
+    "hacks": {
+      "seal_smog_drafts": {
+        "title": "Seal window & door drafts during winter inversion",
+        "desc": "Use weatherstripping tape or rolled damp cloths under door gaps between dusk and mid-morning when cold air traps smog outside."
+      },
+      "run_hepa_filtration": {
+        "title": "Create a Clean-Air Bedroom Zone with HEPA",
+        "desc": "Close bedroom doors and run your HEPA purifier continuously on medium-high so lungs recover for 8+ hours overnight."
+      },
+      "build_diy_box_filter": {
+        "title": "Low-cost DIY Box-Fan + MERV-13 Filter Hack",
+        "desc": "Tape a MERV-13 furnace filter tightly to the intake side of a standard box fan to cut indoor PM2.5 sharply at a fraction of purifier cost."
+      },
+      "wet_mop_dust": {
+        "title": "Wet-mop floors instead of dry sweeping",
+        "desc": "Dry brooms kick settled PM2.5 and PM10 soot back into breathing height; use a damp microfiber mop or wet cloth."
+      },
+      "exhaust_or_induction_cook": {
+        "title": "Ventilate kitchen & use electric appliances",
+        "desc": "Gas and biomass flames spike indoor NO2 and fine particles. Always run the exhaust chimney/fan and use an electric kettle or induction burner when possible."
+      },
+      "stop_indoor_combustion": {
+        "title": "Zero indoor smoke on high-AQI days",
+        "desc": "Pause incense, scented candles, mosquito coils, and indoor smoking — indoors can trap particles 3× longer than outdoor air."
+      },
+      "timed_window_purge": {
+        "title": "Smart 15-minute afternoon cross-ventilation",
+        "desc": "Open opposite windows briefly during the cleanest midday window to flush indoor CO2 without letting morning smog inside."
+      }
+    },
+    "priorityLabels": {
+      "critical": "Urgent",
+      "high": "High Impact",
+      "standard": "Recommended"
+    }
+  },
+  "planner": {
+    "sectionTitle": "Transparent Activity Planner",
+    "activityLabel": "Activity",
+    "activities": {
+      "run": "Run",
+      "cycle": "Cycle",
+      "walk": "Walk",
+      "ventilate": "Open Windows"
+    },
+    "bestWindowTitle": "Best time today",
+    "worstWindowTitle": "Time to avoid",
+    "scoreLabel": "Safety score: {score}/100",
+    "formulaTitle": "How this score is computed (O(n) transparent formula)",
+    "formulaDesc": "Starts at 100 and subtracts weighted US AQI × breathing-rate intensity × persona sensitivity, plus PM2.5/O3 WHO ratio penalties, plus a daylight/dispersion window adjustment.",
+    "aqiPenalty": "AQI + intensity penalty: -{value}",
+    "pollutantPenalty": "PM2.5/O3 WHO penalty: -{value}",
+    "timingBonus": "Dispersion / daylight adjustment: {value}"
+  },
+  "routines": {
+    "sectionTitle": "Low-Emission Daily Routines & Direct Impact",
+    "routinesTitle": "Tailored Low-Emission Routines & Sustainable Alternatives",
+    "priorityHigh": "High priority for your area",
+    "priorityMedium": "Everyday habit",
+    "items": {
+      "shift_to_transit_or_active": {
+        "title": "Switch solo road trips to Metro, bus, or clean-window cycling",
+        "desc": "Public transit cuts street-level NO2 and PM2.5 emissions per traveler while avoiding stop-and-go exhaust exposure.",
+        "whyImpact": "Every 10 km shifted from car to metro/bus avoids ~1.3 kg CO2e and ~1.4 g of lung-irritating NOx."
+      },
+      "avoid_morning_smog_commute": {
+        "title": "Move errands & commute out of the morning inversion peak",
+        "desc": "Winter smog hangs thickest from 6–10 AM before sunlight lifts the inversion lid. Stagger departures or combine afternoon trips.",
+        "whyImpact": "Shifting 1 outdoor hour from peak smog to the cleanest afternoon window often halves inhaled PM2.5 dose."
+      },
+      "bundle_errands_clean_window": {
+        "title": "Bundle household errands into one midday loop",
+        "desc": "Combining school, grocery, and pharmacy stops reduces cold-start engine emissions and saves fuel.",
+        "whyImpact": "Eliminating extra short car starts trims both local NO2 spikes and daily fuel burn."
+      },
+      "clean_cooking_switch": {
+        "title": "Shift simmering and boiling to electric induction or kettle",
+        "desc": "Replacing open gas or solid-fuel flames for daily tea, rice, and reheating keeps kitchen NO2 and PM2.5 low.",
+        "whyImpact": "Prevents indoor PM2.5 surges (~35 µg/m³) that linger inside sealed winter homes."
+      },
+      "remote_work_or_carpool": {
+        "title": "Work remotely or carpool on Severe Smog days",
+        "desc": "Coordinate with neighbors and schools to avoid unnecessary vehicles during winter smog emergencies.",
+        "whyImpact": "Removing 1 daily car commute lowers neighborhood tailpipe pollution and shields sensitive lungs."
+      },
+      "outdoor_exercise_reschedule": {
+        "title": "Reschedule workouts to the safest daily window",
+        "desc": "Deep breathing during exercise draws up to 3–5× more particles per minute into your lungs.",
+        "whyImpact": "Moving exercise to the planner's top-scoring hour or indoors prevents high-dose particle inhalation."
+      }
+    },
+    "simulatorTitle": "Direct Impact Simulator — See What Your Choices Save",
+    "simulatorDesc": "Toggle your daily routine swaps to calculate grounded personal exposure reduction and community emissions saved.",
+    "distanceLabel": "Daily commute distance (km)",
+    "outdoorHoursLabel": "Outdoor active hours",
+    "toggles": {
+      "swapCarToCleanTransit": "Switch car/two-wheeler trip to metro, bus, or active travel",
+      "shiftActivityToBestWindow": "Move outdoor time to today's cleanest window",
+      "wearFittedN95Outdoors": "Wear a fitted N95/FFP2 mask during polluted trips",
+      "useCleanCookingAndExhaust": "Use electric induction/kettle + exhaust fan indoors",
+      "runIndoorAirFiltration": "Run HEPA or DIY box-fan filtration 8 hrs indoors"
+    },
+    "personalSavedLabel": "Personal PM2.5 inhaled avoided",
+    "communityCo2Label": "Community CO2e saved today",
+    "communityNoxLabel": "Community NOx emissions avoided",
+    "impactFormulaNote": "Calculated from fetched city PM2.5 concentration, active/resting breathing rates (1.8 vs 0.5 m³/h), 92% N95 filtration, and DEFRA/EPA per-km emission factors.",
+    "breakdownLabels": {
+      "commute_emissions": "Clean commute swap",
+      "timing_exposure": "Clean-window timing",
+      "mask_protection": "N95/FFP2 filtration",
+      "indoor_filtration": "Indoor HEPA/DIY purifier",
+      "clean_cooking": "Clean kitchen ventilation"
+    }
+  },
+  "compare": {
+    "sectionTitle": "Compare Up to 3 Cities Side by Side",
+    "addCityLabel": "Add city to comparison",
+    "addCityButton": "Add city",
+    "removeCity": "Remove {city}",
+    "maxReached": "Comparison limit reached (3 cities). Remove one to add another.",
+    "cityCol": "City",
+    "usAqiCol": "US AQI",
+    "euAqiCol": "EU AQI",
+    "dominantCol": "Main Pollutant",
+    "smogCol": "Winter Smog Risk",
+    "bestHourCol": "Best Outdoor Hour",
+    "smogSeverity": {
+      "none": "Low",
+      "elevated": "Elevated",
+      "severe_smog": "Severe Smog",
+      "smog_emergency": "Smog Emergency"
+    },
+    "emptyCompare": "Add cities above (or compare the current city with family cities) to view side-by-side air quality."
+  },
+  "alerts": {
+    "sectionTitle": "Local Threshold Alerts",
+    "cityLabel": "Monitored city",
+    "metricLabel": "Alert metric",
+    "thresholdLabel": "Trigger when above",
+    "addAlertButton": "Save alert rule",
+    "metricUsAqi": "US AQI",
+    "metricPm25": "PM2.5 (µg/m³)",
+    "activeAlertsTitle": "Active Air Quality Warnings",
+    "ruleTriggered": "{city}: {metric} is {actual} (above your {threshold} alert threshold).",
+    "noRules": "No alert rules saved yet. Add a threshold (e.g., US AQI > 100) to get warnings in this browser.",
+    "toggleOn": "Enabled",
+    "toggleOff": "Paused",
+    "deleteRule": "Delete alert",
+    "thresholdError": "Enter a positive number between 10 and 500."
+  },
+  "assistant": {
+    "sectionTitle": "GenAI Air Quality & Smog Assistant",
+    "medicalNotice": "Not medical advice: responses provide practical air-quality and low-emission guidance grounded strictly in your fetched telemetry.",
+    "sourceNotice": "Grounded in: {city} ({source}, updated {updated})",
+    "inputLabel": "Ask about smog, indoor air hacks, routines, or your activity plan",
+    "inputPlaceholder": "Ask e.g. How can my family stay safe during tonight's smog?",
+    "sendButton": "Ask assistant",
+    "sending": "Thinking...",
+    "emptyIntro": "Ask a question below or pick a quick prompt to get advice grounded in the exact numbers on your screen.",
+    "quickPrompts": {
+      "smogPlan": "How should my family handle winter smog today?",
+      "indoorHacks": "What indoor air hacks help most right now?",
+      "bestTime": "When is the safest hour to go outside?",
+      "familyProtect": "Which low-emission routine reduces our impact fastest?"
+    },
+    "fallbackBadge": "Rule-Based Grounded Engine (Zero-Key Mode)",
+    "liveLlmBadge": "Live AI Grounded Response",
+    "errorReply": "Could not reach the assistant right now. Try again in a moment."
+  }
+}

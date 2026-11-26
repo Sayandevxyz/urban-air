@@ -1,10 +1,12 @@
+import { UrbanAirWorkbench } from "@/components/UrbanAirWorkbench";
+import { getEnv } from "@/lib/env";
+
 /**
- * Initial application entry route (populated with full dashboard in Phase 4).
+ * Server entry page reading validated configuration and rendering the air quality workbench.
  */
 export default function HomePage() {
-  return (
-    <main id="main-content" className="mx-auto max-w-6xl px-4 py-8">
-      <h1 className="text-3xl font-bold tracking-tight">Urban Air Quality Assistant</h1>
-    </main>
-  );
+  const env = getEnv();
+  const defaultDemoMode = env.NEXT_PUBLIC_DEFAULT_DEMO_MODE === "true";
+
+  return <UrbanAirWorkbench defaultDemoMode={defaultDemoMode} />;
 }
