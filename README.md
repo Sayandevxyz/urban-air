@@ -1,6 +1,6 @@
 # Urban Air Quality Assistant (Challenge 6)
 
-[![CI Verify](https://github.com/Sayandevxyz/urban-air-quality-assistant/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
+[![CI Verify](https://github.com/Sayandevxyz/urban-air/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > **Official Challenge 6 Goal**: _"Create a GenAI-powered assistant that helps families and communities navigate severe winter smog and urban air pollution. The application should suggest low-emission daily routines, indoor air quality hacks, and sustainable alternatives tailored to their location and lifestyle, while clearly explaining the direct impact of their choices."_
@@ -66,8 +66,8 @@ Further documentation:
 ### Quick Start
 
 ```bash
-git clone https://github.com/Sayandevxyz/urban-air-quality-assistant.git
-cd urban-air-quality-assistant
+git clone https://github.com/Sayandevxyz/urban-air.git
+cd urban-air
 npm install
 npm run dev
 ```
