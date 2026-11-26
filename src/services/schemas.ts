@@ -8,9 +8,9 @@ import {
 
 const CITY_NAME_PATTERN = /^[\p{L}\p{N}\s,.'-]+$/u;
 
-export const localeSchema = z.enum(SUPPORTED_LOCALES);
+const localeSchema = z.enum(SUPPORTED_LOCALES);
 
-export const personaSchema = z.enum([
+const personaSchema = z.enum([
   "general",
   "children",
   "elderly",
@@ -20,11 +20,11 @@ export const personaSchema = z.enum([
   "worker",
 ]);
 
-export const commuteModeSchema = z.enum(["car", "transit", "two_wheeler", "walk_cycle"]);
-export const homeEnergyModeSchema = z.enum(["gas_biomass", "electric_induction"]);
-export const filtrationModeSchema = z.enum(["none", "hepa", "diy_box_fan"]);
+const commuteModeSchema = z.enum(["car", "transit", "two_wheeler", "walk_cycle"]);
+const homeEnergyModeSchema = z.enum(["gas_biomass", "electric_induction"]);
+const filtrationModeSchema = z.enum(["none", "hepa", "diy_box_fan"]);
 
-export const residentProfileSchema = z.object({
+const residentProfileSchema = z.object({
   persona: personaSchema,
   commuteMode: commuteModeSchema,
   homeEnergyMode: homeEnergyModeSchema,
@@ -68,7 +68,7 @@ export const airQualityQuerySchema = z
     error: "Provide either cityKey or both lat and lon coordinates.",
   });
 
-export const groundedReadingsSchema = z.object({
+const groundedReadingsSchema = z.object({
   pm25: z.number().min(0).max(2000),
   pm10: z.number().min(0).max(3000),
   no2: z.number().min(0).max(3000),
@@ -99,3 +99,8 @@ export const chatRequestSchema = z.object({
     bestWindowUsAqi: z.number().min(0).max(500).optional(),
   }),
 });
+
+/**
+ * Validated request body shape accepted by POST /api/chat.
+ */
+export type ChatRequestPayload = z.infer<typeof chatRequestSchema>;

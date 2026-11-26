@@ -16,11 +16,33 @@ export const SEARCH_DEBOUNCE_MS = 300;
 export const MAX_CITY_QUERY_LENGTH = 80;
 export const MIN_CITY_QUERY_LENGTH = 2;
 export const MAX_CHAT_MESSAGE_LENGTH = 500;
+export const MAX_CHAT_PAYLOAD_BYTES = 16_384;
 export const MAX_LLM_OUTPUT_TOKENS = 450;
+export const MAX_LLM_OUTPUT_CHARS = 1_400;
 export const MAX_COMPARE_CITIES = 3;
+
+export const ALERT_THRESHOLD_MIN = 10;
+export const ALERT_THRESHOLD_MAX = 500;
+export const ALERT_DEFAULT_THRESHOLD = 100;
+
+export const COMMUTE_MAX_KM = 150;
+export const COMMUTE_DEFAULT_KM = 10;
+export const OUTDOOR_MAX_HOURS = 12;
+export const OUTDOOR_DEFAULT_HOURS = 1.5;
+
+export const DEFAULT_RETRY_AFTER_SECONDS = 30;
+export const UPSTREAM_DEFAULT_RETRY_AFTER_SECONDS = 60;
+
+export const HOURLY_PREVIEW_COUNT = 24;
+export const GEO_TIMEOUT_MS = 8_000;
+export const GEO_MAX_AGE_MS = 60_000;
+
+export const DEFAULT_CHART_MAX_AQI = 100;
+export const CHART_HEADROOM_AQI = 20;
 
 export const COORDINATE_LOG_DECIMALS = 2;
 export const COORDINATE_CACHE_DECIMALS = 2;
+export const COORDINATE_ROUND_FACTOR = 100;
 
 export const ALLOWED_UPSTREAM_HOSTS: readonly string[] = [
   "air-quality-api.open-meteo.com",

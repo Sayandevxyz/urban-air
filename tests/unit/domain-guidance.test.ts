@@ -78,23 +78,23 @@ describe("domain/guidance", () => {
     const severeSmog = assessWinterSmog(205, SEVERE_READINGS);
 
     for (const persona of personas) {
-      const cleanGuidance = buildPersonaGuidance(
-        35,
-        cleanSmog,
-        CLEAN_READINGS,
-        { ...BASE_PROFILE, persona },
-        HOURLY_SAMPLE,
-      );
+      const cleanGuidance = buildPersonaGuidance({
+        usAqi: 35,
+        smog: cleanSmog,
+        readings: CLEAN_READINGS,
+        profile: { ...BASE_PROFILE, persona },
+        hourly: HOURLY_SAMPLE,
+      });
       expect(cleanGuidance.maskAdvice).toBe("none_needed");
       expect(cleanGuidance.windowsAdvice).toBe("open_cross_ventilation");
 
-      const severeGuidance = buildPersonaGuidance(
-        205,
-        severeSmog,
-        SEVERE_READINGS,
-        { ...BASE_PROFILE, persona },
-        HOURLY_SAMPLE,
-      );
+      const severeGuidance = buildPersonaGuidance({
+        usAqi: 205,
+        smog: severeSmog,
+        readings: SEVERE_READINGS,
+        profile: { ...BASE_PROFILE, persona },
+        hourly: HOURLY_SAMPLE,
+      });
       expect(severeGuidance.maskAdvice).toBe("n95_required");
       expect(severeGuidance.windowsAdvice).toBe("keep_sealed");
       expect(severeGuidance.highSensitivityWarning).toBe(true);
@@ -105,76 +105,76 @@ describe("domain/guidance", () => {
     const modReadings = { ...CLEAN_READINGS, pm25: 28 };
     const modSmog = assessWinterSmog(85, modReadings);
 
-    const asthmaModerate = buildPersonaGuidance(
-      85,
-      modSmog,
-      modReadings,
-      { ...BASE_PROFILE, persona: "asthma" },
-      HOURLY_SAMPLE,
-    );
+    const asthmaModerate = buildPersonaGuidance({
+      usAqi: 85,
+      smog: modSmog,
+      readings: modReadings,
+      profile: { ...BASE_PROFILE, persona: "asthma" },
+      hourly: HOURLY_SAMPLE,
+    });
     expect(asthmaModerate.maskAdvice).toBe("optional_sensitive");
     expect(asthmaModerate.windowsAdvice).toBe("brief_clean_window");
     expect(asthmaModerate.recommendedWindowIso).toBe("2026-11-26T15:00:00Z");
 
-    const generalModerate = buildPersonaGuidance(
-      85,
-      modSmog,
-      modReadings,
-      BASE_PROFILE,
-      HOURLY_SAMPLE,
-    );
+    const generalModerate = buildPersonaGuidance({
+      usAqi: 85,
+      smog: modSmog,
+      readings: modReadings,
+      profile: BASE_PROFILE,
+      hourly: HOURLY_SAMPLE,
+    });
     expect(generalModerate.maskAdvice).toBe("none_needed");
     expect(generalModerate.outdoorAdvice).toBe("normal_outdoor");
 
     const sensitiveSmog = assessWinterSmog(135, { ...CLEAN_READINGS, pm25: 48 });
-    const workerSensitive = buildPersonaGuidance(
-      135,
-      sensitiveSmog,
-      { ...CLEAN_READINGS, pm25: 48 },
-      { ...BASE_PROFILE, persona: "worker" },
-      HOURLY_SAMPLE,
-    );
+    const workerSensitive = buildPersonaGuidance({
+      usAqi: 135,
+      smog: sensitiveSmog,
+      readings: { ...CLEAN_READINGS, pm25: 48 },
+      profile: { ...BASE_PROFILE, persona: "worker" },
+      hourly: HOURLY_SAMPLE,
+    });
     expect(workerSensitive.maskAdvice).toBe("n95_recommended");
     expect(workerSensitive.outdoorAdvice).toBe("pace_outdoors");
 
-    const generalUnhealthy = buildPersonaGuidance(
-      175,
-      assessWinterSmog(175, { ...CLEAN_READINGS, pm25: 75 }),
-      { ...CLEAN_READINGS, pm25: 75, o3: 115 },
-      BASE_PROFILE,
-      HOURLY_SAMPLE,
-    );
+    const generalUnhealthy = buildPersonaGuidance({
+      usAqi: 175,
+      smog: assessWinterSmog(175, { ...CLEAN_READINGS, pm25: 75 }),
+      readings: { ...CLEAN_READINGS, pm25: 75, o3: 115 },
+      profile: BASE_PROFILE,
+      hourly: HOURLY_SAMPLE,
+    });
     expect(generalUnhealthy.outdoorAdvice).toBe("shift_indoors");
     expect(generalUnhealthy.checklistKeys).toContain("ozone_avoid_afternoon_peak");
 
-    const asthmaSensitive = buildPersonaGuidance(
-      135,
-      sensitiveSmog,
-      { ...CLEAN_READINGS, pm25: 48 },
-      { ...BASE_PROFILE, persona: "asthma" },
-      HOURLY_SAMPLE,
-    );
+    const asthmaSensitive = buildPersonaGuidance({
+      usAqi: 135,
+      smog: sensitiveSmog,
+      readings: { ...CLEAN_READINGS, pm25: 48 },
+      profile: { ...BASE_PROFILE, persona: "asthma" },
+      hourly: HOURLY_SAMPLE,
+    });
     expect(asthmaSensitive.outdoorAdvice).toBe("shift_indoors");
 
-    const asthmaUnhealthy = buildPersonaGuidance(
-      175,
-      assessWinterSmog(175, { ...CLEAN_READINGS, pm25: 75 }),
-      { ...CLEAN_READINGS, pm25: 75 },
-      { ...BASE_PROFILE, persona: "asthma" },
-      HOURLY_SAMPLE,
-    );
+    const asthmaUnhealthy = buildPersonaGuidance({
+      usAqi: 175,
+      smog: assessWinterSmog(175, { ...CLEAN_READINGS, pm25: 75 }),
+      readings: { ...CLEAN_READINGS, pm25: 75 },
+      profile: { ...BASE_PROFILE, persona: "asthma" },
+      hourly: HOURLY_SAMPLE,
+    });
     expect(asthmaUnhealthy.outdoorAdvice).toBe("avoid_outdoors");
   });
 
   it("handles empty hourly forecast gracefully for clean window selection", () => {
     const smog = assessWinterSmog(115, { ...CLEAN_READINGS, pm25: 41 });
-    const guidance = buildPersonaGuidance(
-      115,
+    const guidance = buildPersonaGuidance({
+      usAqi: 115,
       smog,
-      { ...CLEAN_READINGS, pm25: 41 },
-      BASE_PROFILE,
-      [],
-    );
+      readings: { ...CLEAN_READINGS, pm25: 41 },
+      profile: BASE_PROFILE,
+      hourly: [],
+    });
     expect(guidance.recommendedWindowIso).toBeUndefined();
   });
 

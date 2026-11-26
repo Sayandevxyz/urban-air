@@ -32,13 +32,13 @@ const CAR_GAS_PROFILE: ResidentProfile = {
 describe("domain/routines and domain/impact", () => {
   it("suggests low-emission routines tailored to smog, car commute, and gas/biomass cooking", () => {
     const smog = assessWinterSmog(195, SMOG_READINGS);
-    const routines = buildRoutinesAndAlternatives(
-      195,
+    const routines = buildRoutinesAndAlternatives({
+      usAqi: 195,
       smog,
-      SMOG_READINGS,
-      CAR_GAS_PROFILE,
-      "2026-11-26T15:00:00Z",
-    );
+      readings: SMOG_READINGS,
+      profile: CAR_GAS_PROFILE,
+      bestWindowHourIso: "2026-11-26T15:00:00Z",
+    });
     const ids = routines.map((r) => r.id);
 
     expect(ids).toContain("shift_to_transit_or_active");
@@ -50,18 +50,18 @@ describe("domain/routines and domain/impact", () => {
 
   it("adapts routines for residents already using clean transit and electric induction", () => {
     const cleanSmog = assessWinterSmog(35, CLEAN_READINGS);
-    const routines = buildRoutinesAndAlternatives(
-      35,
-      cleanSmog,
-      CLEAN_READINGS,
-      {
+    const routines = buildRoutinesAndAlternatives({
+      usAqi: 35,
+      smog: cleanSmog,
+      readings: CLEAN_READINGS,
+      profile: {
         persona: "athlete",
         commuteMode: "walk_cycle",
         homeEnergyMode: "electric_induction",
         filtrationMode: "hepa",
       },
-      undefined,
-    );
+      bestWindowHourIso: undefined,
+    });
     expect(routines.map((r) => r.id)).toContain("bundle_errands_clean_window");
     expect(routines.map((r) => r.id)).not.toContain("clean_cooking_switch");
   });
@@ -132,13 +132,13 @@ describe("domain/routines and domain/impact", () => {
     expect(twoWheelerDiy.communityCo2SavedGrams).toBe(310);
     expect(twoWheelerDiy.personalReductionPercent).toBe(0);
 
-    const routinesTrafficModerate = buildRoutinesAndAlternatives(
-      115,
-      assessWinterSmog(115, { ...CLEAN_READINGS, pm25: 40, no2: 70 }),
-      { ...CLEAN_READINGS, pm25: 40, no2: 70 },
-      CAR_GAS_PROFILE,
-      "2026-11-26T15:00:00Z",
-    );
+    const routinesTrafficModerate = buildRoutinesAndAlternatives({
+      usAqi: 115,
+      smog: assessWinterSmog(115, { ...CLEAN_READINGS, pm25: 40, no2: 70 }),
+      readings: { ...CLEAN_READINGS, pm25: 40, no2: 70 },
+      profile: CAR_GAS_PROFILE,
+      bestWindowHourIso: "2026-11-26T15:00:00Z",
+    });
     expect(
       routinesTrafficModerate.find((r) => r.id === "shift_to_transit_or_active")?.priority,
     ).toBe("high");
@@ -146,13 +146,13 @@ describe("domain/routines and domain/impact", () => {
       "high",
     );
 
-    const routinesCleanGas = buildRoutinesAndAlternatives(
-      45,
-      assessWinterSmog(45, CLEAN_READINGS),
-      CLEAN_READINGS,
-      CAR_GAS_PROFILE,
-      "2026-11-26T15:00:00Z",
-    );
+    const routinesCleanGas = buildRoutinesAndAlternatives({
+      usAqi: 45,
+      smog: assessWinterSmog(45, CLEAN_READINGS),
+      readings: CLEAN_READINGS,
+      profile: CAR_GAS_PROFILE,
+      bestWindowHourIso: "2026-11-26T15:00:00Z",
+    });
     expect(routinesCleanGas.find((r) => r.id === "shift_to_transit_or_active")?.priority).toBe(
       "medium",
     );

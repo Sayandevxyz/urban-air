@@ -56,6 +56,11 @@ const eslintConfig = tseslint.config(
         { allowNumber: true, allowBoolean: true },
       ],
       "no-console": "error",
+      "max-lines-per-function": ["error", { max: 40, skipBlankLines: true, skipComments: true }],
+      complexity: ["error", 10],
+      "max-depth": ["error", 3],
+      "max-params": ["error", 4],
+      "max-lines": ["error", 250],
       "import/order": [
         "error",
         {
@@ -74,6 +79,13 @@ const eslintConfig = tseslint.config(
     },
   },
   {
+    // Presentational React components encapsulate multi-element accessible JSX layouts cleanly up to 80 lines.
+    files: ["src/components/**/*.tsx"],
+    rules: {
+      "max-lines-per-function": ["error", { max: 80, skipBlankLines: true, skipComments: true }],
+    },
+  },
+  {
     files: [
       "eslint.config.mjs",
       "postcss.config.mjs",
@@ -85,9 +97,12 @@ const eslintConfig = tseslint.config(
     ...tseslint.configs.disableTypeChecked,
   },
   {
+    // Test suites group cohesive describe/it blocks with shared setup fixtures inside single files.
     files: ["tests/**/*.ts", "tests/**/*.tsx"],
     rules: {
       "security/detect-non-literal-fs-filename": "off",
+      "max-lines-per-function": "off",
+      "max-lines": "off",
     },
   },
 );

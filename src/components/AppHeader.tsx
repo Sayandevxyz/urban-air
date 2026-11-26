@@ -15,6 +15,36 @@ const LOCALE_LABELS: Readonly<Record<SupportedLocale, string>> = {
   ta: "தமிழ்",
 };
 
+function HeaderNav() {
+  const t = useTranslations("app");
+  const links = [
+    ["#dashboard", t("navDashboard")],
+    ["#forecast", t("navForecast")],
+    ["#guidance", t("navGuidance")],
+    ["#routines", t("navRoutines")],
+    ["#assistant", t("navAssistant")],
+    ["#compare", t("navCompare")],
+    ["#alerts", t("navAlerts")],
+  ] as const;
+
+  return (
+    <nav aria-label={t("navLabel")} className="overflow-x-auto pb-1">
+      <ul className="flex flex-wrap gap-2">
+        {links.map(([href, label]) => (
+          <li key={href}>
+            <a
+              href={href}
+              className="inline-flex min-h-[44px] items-center rounded-lg border border-borderc bg-surface px-3 py-2 text-sm font-medium text-ink hover:bg-surface-muted"
+            >
+              {label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
 /**
  * Semantic header landmark with skip link, Demo mode switch, language toggle, and section links.
  */
@@ -69,9 +99,7 @@ export function AppHeader({ demoMode, onToggleDemoMode }: AppHeaderProps) {
                 value={locale}
                 onChange={(event) => {
                   const value = event.target.value;
-                  if (value === "en" || value === "hi" || value === "ta") {
-                    setLocale(value);
-                  }
+                  if (value === "en" || value === "hi" || value === "ta") setLocale(value);
                 }}
                 className="min-h-[44px] rounded-lg border-2 border-borderc-strong bg-surface-elevated px-3 py-2 text-base font-medium text-ink"
               >
@@ -85,30 +113,7 @@ export function AppHeader({ demoMode, onToggleDemoMode }: AppHeaderProps) {
           </div>
         </div>
 
-        <nav aria-label={t("navLabel")} className="overflow-x-auto pb-1">
-          <ul className="flex flex-wrap gap-2">
-            {(
-              [
-                ["#dashboard", t("navDashboard")],
-                ["#forecast", t("navForecast")],
-                ["#guidance", t("navGuidance")],
-                ["#routines", t("navRoutines")],
-                ["#assistant", t("navAssistant")],
-                ["#compare", t("navCompare")],
-                ["#alerts", t("navAlerts")],
-              ] as const
-            ).map(([href, label]) => (
-              <li key={href}>
-                <a
-                  href={href}
-                  className="inline-flex min-h-[44px] items-center rounded-lg border border-borderc bg-surface px-3 py-2 text-sm font-medium text-ink hover:bg-surface-muted"
-                >
-                  {label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <HeaderNav />
       </div>
     </header>
   );

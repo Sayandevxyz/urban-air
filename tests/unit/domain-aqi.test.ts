@@ -1,15 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
-  POLLUTANT_KEYS,
   assessPollutants,
   assessWinterSmog,
-  calculatePollutantUsAqi,
   classifyUsAqi,
-  computeCompositeUsAqi,
   computeEuropeanAqiBand,
-  estimateEuropeanAqiFromPollutants,
   findDominantPollutant,
 } from "@/domain/aqi";
+import {
+  POLLUTANT_KEYS,
+  calculatePollutantUsAqi,
+  computeCompositeUsAqi,
+  estimateEuropeanAqiFromPollutants,
+} from "@/domain/aqiBreakpoints";
 import type { PollutantReadings } from "@/domain/types";
 
 const CLEAN_READINGS: PollutantReadings = {

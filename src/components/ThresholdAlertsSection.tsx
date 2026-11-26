@@ -1,7 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState, type SyntheticEvent } from "react";
+import { AlertRuleForm } from "@/components/AlertRuleForm";
+import { AlertRuleList } from "@/components/AlertRuleList";
 import type { CityLocation, ThresholdAlertRule, TriggeredAlert } from "@/domain/types";
 import { getDemoCityLocations } from "@/services/demo-data";
 
@@ -37,30 +38,6 @@ export function ThresholdAlertsSection({
       ? [currentCity, ...presets]
       : presets;
 
-  const [cityKey, setCityKey] = useState(currentCity?.key ?? "delhi");
-  const [metric, setMetric] = useState<"usAqi" | "pm25">("usAqi");
-  const [thresholdRaw, setThresholdRaw] = useState("100");
-  const [validationError, setValidationError] = useState(false);
-
-  const handleSubmit = (event: SyntheticEvent) => {
-    event.preventDefault();
-    const numeric = Number(thresholdRaw);
-    if (!Number.isFinite(numeric) || numeric < 10 || numeric > 500) {
-      setValidationError(true);
-      return;
-    }
-    setValidationError(false);
-    const chosen = cityOptions.find((c) => c.key === cityKey) ?? cityOptions[0];
-    if (chosen) {
-      onAddRule({
-        cityKey: chosen.key,
-        cityName: chosen.name,
-        metric,
-        threshold: Math.round(numeric),
-      });
-    }
-  };
-
   return (
     <section
       id="alerts"
@@ -91,124 +68,12 @@ export function ThresholdAlertsSection({
         </div>
       )}
 
-      <form
-        onSubmit={handleSubmit}
-        noValidate
-        className="mt-4 grid gap-4 sm:grid-cols-4 sm:items-end"
-      >
-        <div>
-          <label htmlFor="alert-city-select" className="block text-sm font-semibold text-ink">
-            {t("cityLabel")}
-          </label>
-          <select
-            id="alert-city-select"
-            value={cityKey}
-            onChange={(event) => {
-              setCityKey(event.target.value);
-            }}
-            className="mt-1 min-h-[48px] w-full rounded-lg border-2 border-borderc-strong bg-surface px-3 py-2 text-base text-ink"
-          >
-            {cityOptions.map((city) => (
-              <option key={city.key} value={city.key}>
-                {city.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="alert-metric-select" className="block text-sm font-semibold text-ink">
-            {t("metricLabel")}
-          </label>
-          <select
-            id="alert-metric-select"
-            value={metric}
-            onChange={(event) => {
-              setMetric(event.target.value === "pm25" ? "pm25" : "usAqi");
-            }}
-            className="mt-1 min-h-[48px] w-full rounded-lg border-2 border-borderc-strong bg-surface px-3 py-2 text-base text-ink"
-          >
-            <option value="usAqi">{t("metricUsAqi")}</option>
-            <option value="pm25">{t("metricPm25")}</option>
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="alert-threshold-input" className="block text-sm font-semibold text-ink">
-            {t("thresholdLabel")}
-          </label>
-          <input
-            id="alert-threshold-input"
-            type="number"
-            min={10}
-            max={500}
-            value={thresholdRaw}
-            aria-invalid={validationError}
-            aria-describedby={validationError ? "alert-threshold-error" : undefined}
-            onChange={(event) => {
-              setThresholdRaw(event.target.value);
-              setValidationError(false);
-            }}
-            className="mt-1 min-h-[48px] w-full rounded-lg border-2 border-borderc-strong bg-surface px-3 py-2 text-base text-ink"
-          />
-          {validationError && (
-            <p
-              id="alert-threshold-error"
-              className="mt-1 text-xs font-semibold text-rose-800 dark:text-rose-200"
-            >
-              {t("thresholdError")}
-            </p>
-          )}
-        </div>
-
-        <button
-          type="submit"
-          className="min-h-[48px] rounded-lg border-2 border-accent bg-accent px-4 py-2 text-sm font-semibold text-accent-ink hover:bg-accent-strong"
-        >
-          {t("addAlertButton")}
-        </button>
-      </form>
-
-      <div className="mt-5" aria-live="polite">
-        {rules.length === 0 ? (
-          <p className="text-sm text-ink-muted">{t("noRules")}</p>
-        ) : (
-          <ul className="space-y-2">
-            {rules.map((rule) => (
-              <li
-                key={rule.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-borderc bg-surface px-4 py-3 text-sm"
-              >
-                <span className="font-semibold text-ink">
-                  {rule.cityName} · {rule.metric === "usAqi" ? t("metricUsAqi") : t("metricPm25")}{" "}
-                  &gt; {rule.threshold}
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    aria-pressed={rule.enabled}
-                    onClick={() => {
-                      onToggleRule(rule.id);
-                    }}
-                    className="min-h-[44px] rounded-md border border-borderc-strong px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface-muted"
-                  >
-                    {rule.enabled ? t("toggleOn") : t("toggleOff")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onRemoveRule(rule.id);
-                    }}
-                    className="min-h-[44px] rounded-md border border-rose-700 px-3 py-1.5 text-xs font-semibold text-rose-900 hover:bg-rose-50 dark:border-rose-400 dark:text-rose-100 dark:hover:bg-rose-950/60"
-                  >
-                    {t("deleteRule")}
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <AlertRuleForm
+        cityOptions={cityOptions}
+        defaultCityKey={currentCity?.key ?? "delhi"}
+        onAddRule={onAddRule}
+      />
+      <AlertRuleList rules={rules} onToggleRule={onToggleRule} onRemoveRule={onRemoveRule} />
     </section>
   );
 }

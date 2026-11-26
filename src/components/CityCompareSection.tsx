@@ -2,13 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import {
-  assessPollutants,
-  assessWinterSmog,
-  classifyUsAqi,
-  findDominantPollutant,
-} from "@/domain/aqi";
-import { scoreActivityWindows } from "@/domain/planner";
+import { CompareTable } from "@/components/CompareTable";
 import type { AirQualityReport, CityLocation } from "@/domain/types";
 import { MAX_COMPARE_CITIES } from "@/lib/constants";
 import { getDemoCityLocations } from "@/services/demo-data";
@@ -22,7 +16,7 @@ interface CityCompareSectionProps {
 }
 
 /**
- * Side-by-side comparison table and summary cards for up to 3 cities.
+ * Side-by-side comparison section managing city selection up to MAX_COMPARE_CITIES.
  */
 export function CityCompareSection({
   cities,
@@ -32,16 +26,12 @@ export function CityCompareSection({
   onRemoveCity,
 }: CityCompareSectionProps) {
   const t = useTranslations("compare");
-  const tDash = useTranslations("dashboard");
-  const tPol = useTranslations("pollutants");
   const availablePresets = getDemoCityLocations();
   const [candidateKey, setCandidateKey] = useState(availablePresets[2]?.key ?? "mumbai");
 
   const handleAdd = () => {
     const match = availablePresets.find((city) => city.key === candidateKey);
-    if (match) {
-      onAddCity(match);
-    }
+    if (match) onAddCity(match);
   };
 
   return (
@@ -53,7 +43,6 @@ export function CityCompareSection({
         <h2 id="compare-heading" className="text-xl font-bold text-ink">
           {t("sectionTitle")}
         </h2>
-
         <div className="flex flex-wrap items-end gap-2">
           <div>
             <label htmlFor="compare-city-select" className="block text-sm font-semibold text-ink">
@@ -88,87 +77,15 @@ export function CityCompareSection({
       {cities.length >= MAX_COMPARE_CITIES && (
         <p className="mt-2 text-sm text-ink-muted">{t("maxReached")}</p>
       )}
-
       {cities.length === 0 ? (
         <p className="mt-4 text-sm text-ink-muted">{t("emptyCompare")}</p>
       ) : (
-        <div
-          tabIndex={0}
-          role="region"
-          aria-labelledby="compare-table-caption"
-          aria-busy={loading}
-          className="relative mt-4 overflow-x-auto rounded-lg border border-borderc"
-        >
-          <table className="w-full border-collapse text-left text-sm">
-            <caption id="compare-table-caption" className="p-2.5 text-left font-semibold text-ink">
-              {t("sectionTitle")}
-            </caption>
-            <thead className="bg-surface-muted text-ink">
-              <tr>
-                <th scope="col" className="p-3 font-bold">
-                  {t("cityCol")}
-                </th>
-                <th scope="col" className="p-3 font-bold">
-                  {t("usAqiCol")}
-                </th>
-                <th scope="col" className="p-3 font-bold">
-                  {t("euAqiCol")}
-                </th>
-                <th scope="col" className="p-3 font-bold">
-                  {t("dominantCol")}
-                </th>
-                <th scope="col" className="p-3 font-bold">
-                  {t("smogCol")}
-                </th>
-                <th scope="col" className="p-3 font-bold">
-                  {t("bestHourCol")}
-                </th>
-                <th scope="col" className="relative p-3 font-bold">
-                  <span className="visually-hidden">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {cities.map((city) => {
-                const rep = reports[city.key];
-                if (!rep) {
-                  return null;
-                }
-                const usMeta = classifyUsAqi(rep.current.usAqi);
-                const dominant = findDominantPollutant(assessPollutants(rep.current.readings));
-                const smog = assessWinterSmog(rep.current.usAqi, rep.current.readings);
-                const best = scoreActivityWindows(rep.hourly, "walk", "general").bestWindow;
-                return (
-                  <tr key={city.key} className="border-t border-borderc">
-                    <th scope="row" className="p-3 font-bold text-ink">
-                      {city.name}
-                    </th>
-                    <td className="p-3 font-semibold tabular-nums">
-                      {rep.current.usAqi} ({tDash(`categories.${usMeta.category}`)})
-                    </td>
-                    <td className="p-3 tabular-nums">{rep.current.europeanAqi}</td>
-                    <td className="p-3">{tPol(`items.${dominant}.name`)}</td>
-                    <td className="p-3 font-semibold">{t(`smogSeverity.${smog.severity}`)}</td>
-                    <td className="p-3 tabular-nums">
-                      {best ? `${best.timeIso.slice(11, 16)} UTC` : "—"}
-                    </td>
-                    <td className="p-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onRemoveCity(city.key);
-                        }}
-                        className="min-h-[44px] rounded-md border border-borderc-strong px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface-muted"
-                      >
-                        {t("removeCity", { city: city.name })}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <CompareTable
+          cities={cities}
+          reports={reports}
+          loading={loading}
+          onRemoveCity={onRemoveCity}
+        />
       )}
     </section>
   );

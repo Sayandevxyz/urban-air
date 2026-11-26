@@ -47,7 +47,7 @@ export interface UsAqiClassification {
   readonly tokenName: string;
 }
 
-export type SmogSeverity = "none" | "elevated" | "severe_smog" | "smog_emergency";
+type SmogSeverity = "none" | "elevated" | "severe_smog" | "smog_emergency";
 
 export interface SmogAssessment {
   readonly severity: SmogSeverity;

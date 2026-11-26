@@ -2,50 +2,56 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AirQualityReport, CityLocation } from "@/domain/types";
+import { fetchAirQuality, readCachedSnapshot } from "@/hooks/fetchAirQuality";
+import { useAsyncResource } from "@/hooks/useAsyncResource";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import { getDemoAirQualityReport, getDemoCityLocations } from "@/services/demo-data";
 
 export type LoadState = "loading" | "ready" | "empty" | "error" | "offline" | "rate_limited";
 
-const SNAPSHOT_STORAGE_KEY = "urban-air:last-snapshot:v1";
-
-interface AirQualityApiResponse {
-  report?: AirQualityReport;
-  error?: { code?: string; retryAfterSeconds?: number };
+interface LoadOutcome {
+  readonly loadState: LoadState;
+  readonly report?: AirQualityReport;
+  readonly retryAfterSeconds?: number;
 }
 
-function readCachedSnapshot(): AirQualityReport | null {
-  try {
-    const raw = window.localStorage.getItem(SNAPSHOT_STORAGE_KEY);
-    if (!raw) {
-      return null;
-    }
-    const parsed = JSON.parse(raw) as AirQualityReport;
-    if (typeof parsed.updatedAtIso === "string" && parsed.location.name) {
-      return { ...parsed, source: "cached" };
-    }
-    return null;
-  } catch {
-    return null;
+function resolveFallbackOutcome(location: CityLocation, requireSameCity: boolean): LoadOutcome {
+  const cached = readCachedSnapshot();
+  const usable = cached && (!requireSameCity || cached.location.key === location.key);
+  return usable ? { loadState: "offline", report: cached } : { loadState: "error" };
+}
+
+async function fetchLocationOutcome(
+  location: CityLocation,
+  useDemo: boolean,
+  signal: AbortSignal,
+): Promise<LoadOutcome | null> {
+  if (!useDemo && typeof navigator !== "undefined" && !navigator.onLine) {
+    return resolveFallbackOutcome(location, false);
   }
-}
-
-function saveCachedSnapshot(report: AirQualityReport): void {
-  try {
-    // Only persist named city telemetry; never persist raw custom browser geolocation coordinates.
-    if (report.location.key.startsWith("geo-self-")) {
-      return;
-    }
-    window.localStorage.setItem(SNAPSHOT_STORAGE_KEY, JSON.stringify(report));
-  } catch {
-    // Ignore storage quota restrictions.
+  const result = await fetchAirQuality(location, useDemo, signal);
+  if (result.ok) {
+    return { loadState: "ready", report: result.data };
   }
+  if (result.kind === "rate_limited") {
+    return { loadState: "rate_limited", retryAfterSeconds: result.retryAfterSeconds };
+  }
+  return result.kind === "error" ? resolveFallbackOutcome(location, result.status > 0) : null;
 }
 
-/**
- * Fetches live or demo air quality reports with automatic offline snapshot fallback and geolocation support.
- */
-export function useAirQualityData(initialDemoMode: boolean) {
-  const [demoMode, setDemoMode] = useState(initialDemoMode);
+function applyLoadOutcome(
+  outcome: LoadOutcome | null,
+  setReport: (report: AirQualityReport) => void,
+  setRetryAfterSeconds: (sec: number) => void,
+  setLoadState: (state: LoadState) => void,
+): void {
+  if (!outcome) return;
+  if (outcome.report) setReport(outcome.report);
+  if (outcome.retryAfterSeconds !== undefined) setRetryAfterSeconds(outcome.retryAfterSeconds);
+  setLoadState(outcome.loadState);
+}
+
+function useAirQualityLoader(initialDemoMode: boolean) {
   const [selectedCity, setSelectedCity] = useState<CityLocation | null>(
     () => getDemoCityLocations()[0] ?? null,
   );
@@ -54,154 +60,88 @@ export function useAirQualityData(initialDemoMode: boolean) {
   );
   const [loadState, setLoadState] = useState<LoadState>(initialDemoMode ? "ready" : "loading");
   const [retryAfterSeconds, setRetryAfterSeconds] = useState(0);
-  const [geoStatusMessageKey, setGeoStatusMessageKey] = useState<
-    "none" | "locating" | "locationDenied" | "locationUnavailable"
-  >("none");
-  const abortRef = useRef<AbortController | null>(null);
-  const skipInitialDemoRef = useRef(initialDemoMode);
+  const { nextSignal } = useAsyncResource();
 
-  const fetchForLocation = useCallback(async (location: CityLocation, useDemo: boolean) => {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    setSelectedCity(location);
-
-    if (useDemo) {
-      const seeded = getDemoAirQualityReport(location);
-      setReport(seeded);
-      setLoadState("ready");
-      return;
-    }
-
-    if (typeof navigator !== "undefined" && !navigator.onLine) {
-      const cached = readCachedSnapshot();
-      if (cached) {
-        setReport(cached);
-        setLoadState("offline");
+  const loadForLocation = useCallback(
+    (location: CityLocation, useDemo: boolean) => {
+      const signal = nextSignal();
+      setSelectedCity(location);
+      if (useDemo) {
+        setReport(getDemoAirQualityReport(location));
+        setLoadState("ready");
         return;
       }
-      setLoadState("error");
-      return;
-    }
-
-    setLoadState("loading");
-    const params = new URLSearchParams({
-      lat: String(location.latitude),
-      lon: String(location.longitude),
-      name: location.name,
-      region: location.region,
-      country: location.country,
-      timezone: location.timezone,
-      demo: "false",
-    });
-    if (!location.key.startsWith("geo-self-") && !location.key.startsWith("loc-")) {
-      params.set("cityKey", location.key);
-    }
-
-    try {
-      const res = await fetch(`/api/air-quality?${params.toString()}`, {
-        signal: controller.signal,
+      setLoadState("loading");
+      void fetchLocationOutcome(location, false, signal).then((outcome) => {
+        applyLoadOutcome(outcome, setReport, setRetryAfterSeconds, setLoadState);
       });
-      const data = (await res.json().catch(() => ({}))) as AirQualityApiResponse;
+    },
+    [nextSignal],
+  );
 
-      if (res.status === 429) {
-        setRetryAfterSeconds(data.error?.retryAfterSeconds ?? 30);
-        setLoadState("rate_limited");
-        return;
-      }
-      if (!res.ok || !data.report) {
-        const cached = readCachedSnapshot();
-        if (cached && cached.location.key === location.key) {
-          setReport(cached);
-          setLoadState("offline");
-          return;
-        }
-        setLoadState("error");
-        return;
-      }
+  return {
+    selectedCity,
+    setSelectedCity,
+    report,
+    loadState,
+    setLoadState,
+    retryAfterSeconds,
+    loadForLocation,
+  };
+}
 
-      saveCachedSnapshot(data.report);
-      setReport(data.report);
-      setLoadState("ready");
-    } catch (error: unknown) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        return;
-      }
-      const cached = readCachedSnapshot();
-      if (cached) {
-        setReport(cached);
-        setLoadState("offline");
-        return;
-      }
-      setLoadState("error");
-    }
-  }, []);
+function useAutoLoadEffect(
+  loader: ReturnType<typeof useAirQualityLoader>,
+  demoMode: boolean,
+  initialDemoMode: boolean,
+) {
+  const skipInitialDemoRef = useRef(initialDemoMode);
+  const { selectedCity, setLoadState, loadForLocation } = loader;
 
   useEffect(() => {
     if (skipInitialDemoRef.current) {
       skipInitialDemoRef.current = false;
       return;
     }
-    if (selectedCity) {
-      void fetchForLocation(selectedCity, demoMode);
-    } else {
+    if (!selectedCity) {
       setLoadState("empty");
-    }
-    return () => {
-      abortRef.current?.abort();
-    };
-  }, [demoMode, fetchForLocation, selectedCity]);
-
-  const selectCity = useCallback((city: CityLocation) => {
-    setGeoStatusMessageKey("none");
-    setSelectedCity(city);
-  }, []);
-
-  const retry = useCallback(() => {
-    if (selectedCity) {
-      void fetchForLocation(selectedCity, demoMode);
-    }
-  }, [demoMode, fetchForLocation, selectedCity]);
-
-  const requestUserLocation = useCallback(() => {
-    const geo: Partial<Geolocation> | undefined =
-      typeof navigator !== "undefined" ? navigator.geolocation : undefined;
-    if (typeof geo?.getCurrentPosition !== "function") {
-      setGeoStatusMessageKey("locationUnavailable");
       return;
     }
+    loadForLocation(selectedCity, demoMode);
+  }, [demoMode, loadForLocation, selectedCity, setLoadState]);
+}
 
-    setGeoStatusMessageKey("locating");
-    geo.getCurrentPosition(
-      (position) => {
-        setGeoStatusMessageKey("none");
-        const customLoc: CityLocation = {
-          key: "geo-self-current",
-          name: "Current Location",
-          region: "",
-          country: "",
-          latitude: Math.round(position.coords.latitude * 100) / 100,
-          longitude: Math.round(position.coords.longitude * 100) / 100,
-          timezone: "auto",
-        };
-        setSelectedCity(customLoc);
-      },
-      (geoError) => {
-        setGeoStatusMessageKey(
-          geoError.code === geoError.PERMISSION_DENIED ? "locationDenied" : "locationUnavailable",
-        );
-      },
-      { enableHighAccuracy: false, timeout: 8_000, maximumAge: 60_000 },
-    );
-  }, []);
+/**
+ * Orchestrates live or demo air quality report loading, offline snapshot fallback, and geolocation.
+ */
+export function useAirQualityData(initialDemoMode: boolean) {
+  const [demoMode, setDemoMode] = useState(initialDemoMode);
+  const loader = useAirQualityLoader(initialDemoMode);
+  const { selectedCity, setSelectedCity, loadForLocation } = loader;
+  useAutoLoadEffect(loader, demoMode, initialDemoMode);
+
+  const { geoStatusMessageKey, requestUserLocation, clearGeoMessage } =
+    useGeolocation(setSelectedCity);
+
+  const selectCity = useCallback(
+    (city: CityLocation) => {
+      clearGeoMessage();
+      setSelectedCity(city);
+    },
+    [clearGeoMessage, setSelectedCity],
+  );
+
+  const retry = useCallback(() => {
+    if (selectedCity) loadForLocation(selectedCity, demoMode);
+  }, [demoMode, loadForLocation, selectedCity]);
 
   return {
     demoMode,
     setDemoMode,
     selectedCity,
-    report,
-    loadState,
-    retryAfterSeconds,
+    report: loader.report,
+    loadState: loader.loadState,
+    retryAfterSeconds: loader.retryAfterSeconds,
     geoStatusMessageKey,
     selectCity,
     retry,

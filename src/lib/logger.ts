@@ -3,7 +3,7 @@ import { COORDINATE_LOG_DECIMALS } from "@/lib/constants";
 /**
  * Supported structured logger severity levels.
  */
-export type LogLevel = "debug" | "info" | "warn" | "error" | "silent";
+type LogLevel = "debug" | "info" | "warn" | "error" | "silent";
 
 const LOG_PRIORITY: Record<LogLevel, number> = {
   debug: 10,

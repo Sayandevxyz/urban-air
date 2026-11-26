@@ -59,16 +59,24 @@ function resolveOutdoorAdvice(usAqi: number, isSensitivePersona: boolean): Outdo
   return "normal_outdoor";
 }
 
+export interface PersonaGuidanceInput {
+  readonly usAqi: number;
+  readonly smog: SmogAssessment;
+  readonly readings: PollutantReadings;
+  readonly profile: ResidentProfile;
+  readonly hourly: readonly HourlyForecastPoint[];
+}
+
 /**
  * Generates personalized mask, window ventilation, and activity advice tailored to persona and smog risk.
  */
-export function buildPersonaGuidance(
-  usAqi: number,
-  smog: SmogAssessment,
-  readings: PollutantReadings,
-  profile: ResidentProfile,
-  hourly: readonly HourlyForecastPoint[],
-): PersonaGuidance {
+export function buildPersonaGuidance({
+  usAqi,
+  smog,
+  readings,
+  profile,
+  hourly,
+}: PersonaGuidanceInput): PersonaGuidance {
   const isSensitivePersona = HIGH_SENSITIVITY_PERSONAS.has(profile.persona);
   const maskAdvice = resolveMaskAdvice(usAqi, isSensitivePersona);
   const windowsAdvice = resolveWindowsAdvice(usAqi, smog);

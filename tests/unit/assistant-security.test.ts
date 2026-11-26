@@ -1,12 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resetEnvCache } from "@/lib/env";
-import {
-  answerAirQualityQuestion,
-  detectPromptInjection,
-  generateGroundedFallbackReply,
-  sanitizeUserPrompt,
-  type ChatRequestPayload,
-} from "@/services/assistant";
+import { answerAirQualityQuestion } from "@/services/assistant";
+import { generateGroundedFallbackReply } from "@/services/assistantFallback";
+import { detectPromptInjection, sanitizeUserPrompt } from "@/services/assistantSanitize";
+import type { ChatRequestPayload } from "@/services/schemas";
 
 const BASE_PAYLOAD: ChatRequestPayload = {
   message: "How should my family handle winter smog today?",
