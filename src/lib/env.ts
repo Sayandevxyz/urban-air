@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ALLOWED_UPSTREAM_HOSTS } from "@/lib/constants";
+import { ALLOWED_UPSTREAM_HOSTS, DAILY_LLM_MAX_REQUESTS } from "@/lib/constants";
 import { AppError } from "@/lib/errors";
 
 function isAllowlistedHttpsUrl(value: string): boolean {
@@ -33,7 +33,12 @@ const envSchema = z.object({
   ANTHROPIC_MODEL: z.string().trim().min(3).max(80).default("claude-3-5-haiku-latest"),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().min(1).max(10_000).default(60),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(1_000).max(3_600_000).default(60_000),
-  DAILY_LLM_MAX_REQUESTS: z.coerce.number().int().min(1).max(10_000).default(50),
+  DAILY_LLM_MAX_REQUESTS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(10_000)
+    .default(DAILY_LLM_MAX_REQUESTS),
   TRUST_PROXY: z.enum(["true", "false"]).default("false"),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error", "silent"]).default("info"),
 });
