@@ -30,6 +30,11 @@ const CityCompareSection = dynamic(
   { ssr: true },
 );
 
+const AirQualityChat = dynamic(
+  () => import("@/components/AirQualityChat").then((m) => m.AirQualityChat),
+  { ssr: true },
+);
+
 const DEFAULT_PROFILE: ResidentProfile = {
   persona: "general",
   commuteMode: "car",
@@ -87,6 +92,7 @@ export function UrbanAirWorkbench({ defaultDemoMode }: { readonly defaultDemoMod
             <GuidanceSection report={aq.report} profile={profile} onChangeProfile={setProfile} />
             <ActivityPlanner report={aq.report} persona={profile.persona} />
             <RoutinesImpactSection report={aq.report} profile={profile} />
+            <AirQualityChat report={aq.report} profile={profile} />
           </>
         )}
 
