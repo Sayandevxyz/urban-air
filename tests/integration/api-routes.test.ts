@@ -67,6 +67,8 @@ function buildRequest(path: string, ip = "198.51.100.1"): NextRequest {
 }
 
 describe("integration: API routes with MSW", () => {
+  const prevTrustProxy = process.env.TRUST_PROXY;
+
   beforeAll(() => {
     mswServer.listen({ onUnhandledRequest: "error" });
   });
@@ -75,6 +77,7 @@ describe("integration: API routes with MSW", () => {
   });
 
   beforeEach(() => {
+    process.env.TRUST_PROXY = "true";
     sharedServerCache.clear();
     resetRateLimiter();
     resetEnvCache();
@@ -82,6 +85,9 @@ describe("integration: API routes with MSW", () => {
 
   afterEach(() => {
     mswServer.resetHandlers();
+    if (prevTrustProxy === undefined) delete process.env.TRUST_PROXY;
+    else process.env.TRUST_PROXY = prevTrustProxy;
+    resetEnvCache();
   });
 
   it("GET /api/health reports liveness without leaking secrets", async () => {
@@ -95,6 +101,7 @@ describe("integration: API routes with MSW", () => {
   it("GET /api/geocode handles live Open-Meteo success, empty results, demo mode, and invalid input", async () => {
     const live = await getGeocode(buildRequest("/api/geocode?q=Delhi"));
     expect(live.status).toBe(200);
+    expect(live.headers.get("Cache-Control")).toBe("no-store");
     const liveData = (await live.json()) as { results: Array<{ name: string }> };
     expect(liveData.results[0]?.name).toBe("Delhi");
 

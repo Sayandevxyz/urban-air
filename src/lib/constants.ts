@@ -44,6 +44,9 @@ export const COORDINATE_LOG_DECIMALS = 2;
 export const COORDINATE_CACHE_DECIMALS = 2;
 export const COORDINATE_ROUND_FACTOR = 100;
 
+export const DAILY_LLM_MAX_REQUESTS = 50;
+export const DAILY_LLM_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 export const ALLOWED_UPSTREAM_HOSTS: readonly string[] = [
   "air-quality-api.open-meteo.com",
   "geocoding-api.open-meteo.com",

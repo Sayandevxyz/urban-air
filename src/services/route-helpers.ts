@@ -40,12 +40,17 @@ export function withApiHandler(
 
 function assertRequestMetadata(request: NextRequest, maxBytes: number): void {
   const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
-  if (contentType && !contentType.includes("application/json")) {
+  if (!contentType.includes("application/json")) {
     throw new AppError("VALIDATION_ERROR", "Content-Type must be application/json.", 415);
   }
-  const declared = Number.parseInt(request.headers.get("content-length") ?? "", 10);
-  if (Number.isFinite(declared) && declared > maxBytes) {
-    throw new AppError("PAYLOAD_TOO_LARGE", "Request payload exceeds maximum allowed size.", 413);
+  const lengthRaw = request.headers.get("content-length");
+  if (lengthRaw !== null) {
+    if (!/^\d+$/.test(lengthRaw.trim())) {
+      throw new AppError("VALIDATION_ERROR", "Invalid Content-Length header.", 400);
+    }
+    if (Number.parseInt(lengthRaw, 10) > maxBytes) {
+      throw new AppError("PAYLOAD_TOO_LARGE", "Request payload exceeds maximum allowed size.", 413);
+    }
   }
 }
 

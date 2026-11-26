@@ -20,13 +20,12 @@ export const viewport: Viewport = {
  */
 export default async function RootLayout({ children }: { readonly children: ReactNode }) {
   const headerStore = await headers();
-  const nonce = headerStore.get("x-nonce") ?? undefined;
+  headerStore.get("x-nonce");
 
   return (
     <html lang="en">
       <head>
         <meta name="color-scheme" content="light dark" />
-        {nonce ? <meta name="csp-nonce" content={nonce} /> : null}
       </head>
       <body className="min-h-dvh bg-surface text-ink antialiased">
         <AppLocaleProvider>{children}</AppLocaleProvider>

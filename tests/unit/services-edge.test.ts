@@ -14,12 +14,20 @@ describe("services edge cases, middleware, and RSC entry", () => {
     vi.restoreAllMocks();
   });
 
-  it("middleware attaches CSP nonce and security headers", () => {
+  it("middleware sets CSP nonce internally without echoing x-nonce on HTTP responses", () => {
     const req = new NextRequest("https://localhost:3000/");
     const res = middleware(req);
     expect(res.headers.get("content-security-policy")).toContain("script-src");
-    expect(res.headers.get("x-nonce")).toBeTruthy();
+    expect(res.headers.get("content-security-policy")).toContain("style-src");
+    expect(res.headers.get("x-nonce")).toBeNull();
+    expect(res.headers.get("x-middleware-request-x-nonce")).toBeTruthy();
     expect(res.headers.get("x-frame-options")).toBe("DENY");
+    expect(res.headers.get("cross-origin-opener-policy")).toBe("same-origin");
+    expect(res.headers.get("cross-origin-resource-policy")).toBe("same-origin");
+    expect(res.headers.get("x-dns-prefetch-control")).toBe("off");
+
+    const apiRes = middleware(new NextRequest("https://localhost:3000/api/health"));
+    expect(apiRes.headers.get("cache-control")).toBe("no-store");
 
     const devHeaders = buildSecurityHeaders("abc123", true);
     expect(devHeaders["Content-Security-Policy"]).toContain("'unsafe-eval'");

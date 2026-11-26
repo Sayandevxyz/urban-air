@@ -1,3 +1,4 @@
+import { getEnv } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 
 /**
@@ -120,19 +121,44 @@ export class InMemoryTokenBucketRateLimiter implements RateLimiter {
   }
 }
 
+const IPV4_SEGMENT_PATTERN = /^\d+\.\d+\.\d+\.\d+$/;
+const IPV6_PATTERN = /^[0-9a-fA-F:]{2,45}$/;
+
+function isValidIpv4(ip: string): boolean {
+  if (!IPV4_SEGMENT_PATTERN.test(ip)) return false;
+  return ip.split(".").every((part) => {
+    if (part.length > 3) return false;
+    const value = Number(part);
+    return Number.isInteger(value) && value >= 0 && value <= 255;
+  });
+}
+
 /**
- * Extracts a normalized client identifier from incoming request headers without trusting spoofed lists.
+ * Validates IPv4 or IPv6 syntax before keying a client rate-limit bucket.
  */
-export function extractClientIp(headers: Headers): string {
+export function isValidIpAddress(candidate: string): boolean {
+  if (candidate.length === 0 || candidate.length > 45) return false;
+  if (isValidIpv4(candidate)) return true;
+  return candidate.includes(":") && IPV6_PATTERN.test(candidate);
+}
+
+/**
+ * Extracts a validated client identifier only when TRUST_PROXY=true, resisting X-Forwarded-For spoofing.
+ */
+export function extractClientIp(
+  headers: Headers,
+  trustProxy = getEnv().TRUST_PROXY === "true",
+): string {
+  if (!trustProxy) {
+    return "127.0.0.1";
+  }
   const forwarded = headers.get("x-forwarded-for");
   if (forwarded) {
-    const firstIp = forwarded.split(",")[0]?.trim();
-    if (firstIp && firstIp.length <= 64) {
-      return firstIp;
-    }
+    const firstIp = forwarded.split(",")[0]?.trim() ?? "";
+    if (isValidIpAddress(firstIp)) return firstIp;
   }
-  const realIp = headers.get("x-real-ip")?.trim();
-  if (realIp && realIp.length <= 64) {
+  const realIp = headers.get("x-real-ip")?.trim() ?? "";
+  if (isValidIpAddress(realIp)) {
     return realIp;
   }
   return "127.0.0.1";

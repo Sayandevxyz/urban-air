@@ -5,19 +5,21 @@ import {
 } from "@/lib/constants";
 import type { ValidatedEnv } from "@/lib/env";
 
-const CONTROL_CHAR_PATTERN = /[\u0000-\u001F\u007F\u200B-\u200F\uFEFF]/g;
+const CONTROL_CHAR_PATTERN = /[\u0000-\u001F\u007F\u00AD\u200B-\u200F\u202A-\u202E\u2060\uFEFF]/g;
 const PROMPT_TOKEN_PATTERN =
   /<\|[^|]{1,40}\|>|\[\/?(?:INST|SYS)\]|<<\/?SYS>>|###\s*(?:System|Assistant|Developer):/gi;
 
 const INJECTION_PATTERNS: readonly RegExp[] = [
   /ignore\s+(?:all|any|the|previous|above|prior)\s+instructions?/i,
   /disregard\s+(?:all|the|your|previous)?\s*(?:rules|system|instructions)/i,
+  /forget\s+(?:all|everything|previous|prior)\s+(?:above|rules|instructions)/i,
   /(?:reveal|print|dump|show|repeat|leak|echo)\s+your\s+(?:system\s+prompt|instructions|process\.env|secrets?|api\s+keys?)/i,
   /(?:reveal|print|dump|show|repeat|leak|echo)\s+(?:system\s+prompt|instructions|process\.env|secrets?|api_keys?|api\s+keys?)/i,
   /\b(?:GEMINI_API_KEY|ANTHROPIC_API_KEY|OPENAI_API_KEY|process\.env)\b/i,
   /\b(?:jailbreak|developer\s+mode|DAN\s+mode|bypass\s+safety|override\s+rules)\b/i,
+  /new\s+(?:system\s+prompt|system\s+message|developer\s+instructions)/i,
   /(?:pretend|act\s+as|you\s+are\s+now)\s+(?:a|an|my)?\s*(?:unrestricted|admin|root|system|doctor)/i,
-  /\b(?:function_call|tool_calls?|<\s*tool_call\b|\{"name":\s*"exec)\b/i,
+  /\b(?:function_call|tool_calls?|<\s*tool_call\b|<\s*function_calls?\b|\{"name":\s*"exec)\b/i,
   /<\s*script\b|javascript:/i,
 ];
 

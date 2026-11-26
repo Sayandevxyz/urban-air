@@ -1,12 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { resetEnvCache } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import {
   InMemoryTokenBucketRateLimiter,
   enforceRateLimit,
   extractClientIp,
+  isValidIpAddress,
 } from "@/services/rate-limit";
 
 describe("InMemoryTokenBucketRateLimiter", () => {
+  const prevTrustProxy = process.env.TRUST_PROXY;
+
+  afterEach(() => {
+    if (prevTrustProxy === undefined) delete process.env.TRUST_PROXY;
+    else process.env.TRUST_PROXY = prevTrustProxy;
+    resetEnvCache();
+  });
+
   it("allows burst up to capacity, blocks with Retry-After, and refills over time", async () => {
     let now = 10_000;
     const limiter = new InMemoryTokenBucketRateLimiter({
@@ -34,27 +44,55 @@ describe("InMemoryTokenBucketRateLimiter", () => {
     limiter.reset();
   });
 
-  it("extracts client IP safely and throws typed 429 AppError when limit exceeded", async () => {
-    const headers = new Headers({ "x-forwarded-for": "203.0.113.10, 10.0.0.1" });
-    expect(extractClientIp(headers)).toBe("203.0.113.10");
-    expect(extractClientIp(new Headers({ "x-real-ip": "198.51.100.7" }))).toBe("198.51.100.7");
-    expect(extractClientIp(new Headers())).toBe("127.0.0.1");
+  it("ignores spoofed proxy headers when TRUST_PROXY is false and validates IPs when true", async () => {
+    const spoofedHeaders = new Headers({
+      "x-forwarded-for": "203.0.113.10, 10.0.0.1",
+      "x-real-ip": "198.51.100.7",
+    });
 
+    expect(extractClientIp(spoofedHeaders, false)).toBe("127.0.0.1");
+    expect(extractClientIp(spoofedHeaders, true)).toBe("203.0.113.10");
+    expect(extractClientIp(new Headers({ "x-real-ip": "198.51.100.7" }), true)).toBe(
+      "198.51.100.7",
+    );
+    expect(extractClientIp(new Headers({ "x-forwarded-for": "2001:db8::1" }), true)).toBe(
+      "2001:db8::1",
+    );
+    expect(extractClientIp(new Headers({ "x-forwarded-for": "999.999.1.1;evil" }), true)).toBe(
+      "127.0.0.1",
+    );
+    expect(extractClientIp(new Headers(), true)).toBe("127.0.0.1");
+
+    expect(isValidIpAddress("192.0.2.1")).toBe(true);
+    expect(isValidIpAddress("256.0.0.1")).toBe(false);
+    expect(isValidIpAddress("not-an-ip")).toBe(false);
+
+    process.env.TRUST_PROXY = "true";
+    resetEnvCache();
     const limiter = new InMemoryTokenBucketRateLimiter({ maxRequests: 1, windowMs: 60_000 });
-    await enforceRateLimit(limiter, headers, "test");
-    await expect(enforceRateLimit(limiter, headers, "test")).rejects.toThrow(AppError);
+    await enforceRateLimit(limiter, spoofedHeaders, "test");
+    await expect(enforceRateLimit(limiter, spoofedHeaders, "test")).rejects.toThrow(AppError);
+  });
 
+  it("enforces maxBuckets cap and evicts stale or oldest buckets", async () => {
     let now = 0;
     const bounded = new InMemoryTokenBucketRateLimiter({
-      maxRequests: 2,
+      maxRequests: 1,
       windowMs: 1_000,
       maxBuckets: 2,
       now: () => now,
     });
     await bounded.consume("k1");
     await bounded.consume("k2");
+    // Exhaust k1 so we verify eviction clears its exhausted bucket when capacity forces pruning.
+    expect((await bounded.consume("k1")).allowed).toBe(false);
+
     await bounded.consume("k3");
+    // k1 (oldest) was evicted, so k1 receives a fresh bucket on next consume.
+    expect((await bounded.consume("k1")).allowed).toBe(true);
+
     now += 2_000;
     await bounded.consume("k4");
+    expect((await bounded.consume("k2")).allowed).toBe(true);
   });
 });

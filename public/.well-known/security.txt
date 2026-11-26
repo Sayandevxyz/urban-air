@@ -1,0 +1,5 @@
+Contact: https://github.com/Sayandevxyz/urban-air/security/advisories/new
+Expires: 2027-12-31T23:59:59Z
+Preferred-Languages: en, hi, ta
+Canonical: https://github.com/Sayandevxyz/urban-air/blob/main/public/.well-known/security.txt
+Policy: https://github.com/Sayandevxyz/urban-air/blob/main/SECURITY.md

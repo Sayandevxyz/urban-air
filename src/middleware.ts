@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { buildSecurityHeaders, generateCspNonce } from "@/services/security-headers";
 
 /**
- * Attaches a per-request CSP nonce and strict security headers to every HTML and API response.
+ * Attaches a per-request CSP nonce via internal request headers and strict security headers on responses.
  */
 export function middleware(request: NextRequest): NextResponse {
   const nonce = generateCspNonce();
@@ -21,7 +21,9 @@ export function middleware(request: NextRequest): NextResponse {
   for (const [key, value] of Object.entries(headers)) {
     response.headers.set(key, value);
   }
-  response.headers.set("x-nonce", nonce);
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    response.headers.set("Cache-Control", "no-store");
+  }
 
   return response;
 }

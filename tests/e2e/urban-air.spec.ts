@@ -14,15 +14,30 @@ test.describe("Urban Air Quality Assistant E2E flow", () => {
       consoleErrors.push(err.message);
     });
 
+    const cspViolations: string[] = [];
+    await page.addInitScript(() => {
+      window.addEventListener("securitypolicyviolation", (event) => {
+        window.__cspViolations = [
+          ...(window.__cspViolations ?? []),
+          `${event.violatedDirective}:${event.blockedURI}`,
+        ];
+      });
+    });
+
     const response = await page.goto("/", { waitUntil: "networkidle" });
     expect(response).not.toBeNull();
     const headers = response?.headers() ?? {};
     expect(headers["content-security-policy"]).toContain("script-src");
-    expect(headers["content-security-policy"]).not.toContain("script-src 'self' 'unsafe-inline'");
+    expect(headers["content-security-policy"]).toContain("style-src");
+    expect(headers["content-security-policy"]).not.toContain("'unsafe-inline'");
+    expect(headers["x-nonce"]).toBeUndefined();
     expect(headers["x-content-type-options"]).toBe("nosniff");
     expect(headers["x-frame-options"]).toBe("DENY");
     expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
     expect(headers["permissions-policy"]).toContain("geolocation=(self)");
+    expect(headers["cross-origin-opener-policy"]).toBe("same-origin");
+    expect(headers["cross-origin-resource-policy"]).toBe("same-origin");
+    expect(headers["x-dns-prefetch-control"]).toBe("off");
 
     // Ensure main purpose is visible immediately
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
@@ -93,6 +108,14 @@ test.describe("Urban Air Quality Assistant E2E flow", () => {
     );
     expect(hasOverflow).toBe(false);
 
+    const recordedViolations = await page.evaluate(() => window.__cspViolations ?? []);
+    expect([...cspViolations, ...recordedViolations]).toEqual([]);
     expect(consoleErrors).toEqual([]);
   });
 });
+
+declare global {
+  interface Window {
+    __cspViolations?: string[];
+  }
+}

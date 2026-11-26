@@ -66,6 +66,8 @@ describe("integration: POST /api/chat", () => {
   const prevGemini = process.env.GEMINI_API_KEY;
   const prevAnthropic = process.env.ANTHROPIC_API_KEY;
   const prevProvider = process.env.LLM_PROVIDER;
+  const prevDailyMax = process.env.DAILY_LLM_MAX_REQUESTS;
+  const prevTrustProxy = process.env.TRUST_PROXY;
 
   beforeAll(() => {
     mswServer.listen({ onUnhandledRequest: "error" });
@@ -78,6 +80,7 @@ describe("integration: POST /api/chat", () => {
     delete process.env.GEMINI_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
     process.env.LLM_PROVIDER = "auto";
+    process.env.TRUST_PROXY = "true";
     resetEnvCache();
     resetRateLimiter();
   });
@@ -90,6 +93,10 @@ describe("integration: POST /api/chat", () => {
     else process.env.ANTHROPIC_API_KEY = prevAnthropic;
     if (prevProvider === undefined) delete process.env.LLM_PROVIDER;
     else process.env.LLM_PROVIDER = prevProvider;
+    if (prevDailyMax === undefined) delete process.env.DAILY_LLM_MAX_REQUESTS;
+    else process.env.DAILY_LLM_MAX_REQUESTS = prevDailyMax;
+    if (prevTrustProxy === undefined) delete process.env.TRUST_PROXY;
+    else process.env.TRUST_PROXY = prevTrustProxy;
     resetEnvCache();
   });
 
@@ -177,5 +184,31 @@ describe("integration: POST /api/chat", () => {
 
     const tooLargeBody = await postChat(makeChatReq("x".repeat(17_000)));
     expect(tooLargeBody.status).toBe(413);
+
+    const wrongMimeReq = new NextRequest("https://localhost:3000/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify(VALID_BODY),
+    });
+    expect((await postChat(wrongMimeReq)).status).toBe(415);
+
+    const missingMimeReq = new NextRequest("https://localhost:3000/api/chat", {
+      method: "POST",
+      body: JSON.stringify(VALID_BODY),
+    });
+    expect((await postChat(missingMimeReq)).status).toBe(415);
+  });
+
+  it("enforces daily per-IP quota limit with 429 and Retry-After header", async () => {
+    process.env.DAILY_LLM_MAX_REQUESTS = "2";
+    resetEnvCache();
+    resetRateLimiter();
+
+    expect((await postChat(makeChatReq(VALID_BODY, "198.51.100.99"))).status).toBe(200);
+    expect((await postChat(makeChatReq(VALID_BODY, "198.51.100.99"))).status).toBe(200);
+    const blocked = await postChat(makeChatReq(VALID_BODY, "198.51.100.99"));
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers.get("Retry-After")).toBeTruthy();
+    expect(blocked.headers.get("Cache-Control")).toBe("no-store");
   });
 });

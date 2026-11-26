@@ -38,7 +38,7 @@ describe("security: SSRF protection and CSP headers", () => {
     }
   });
 
-  it("generates unique nonces and strict CSP headers without unsafe-inline scripts", () => {
+  it("generates unique nonces and strict CSP headers without unsafe-inline scripts or styles", () => {
     const n1 = generateCspNonce();
     const n2 = generateCspNonce();
     expect(n1).not.toBe(n2);
@@ -46,13 +46,17 @@ describe("security: SSRF protection and CSP headers", () => {
 
     const prodHeaders = buildSecurityHeaders(n1, false);
     const csp = prodHeaders["Content-Security-Policy"] ?? "";
-    expect(csp).toContain(`'nonce-${n1}'`);
-    expect(csp).not.toContain("script-src 'self' 'unsafe-inline'");
+    expect(csp).toContain(`script-src 'self' 'nonce-${n1}'`);
+    expect(csp).toContain(`style-src 'self' 'nonce-${n1}'`);
+    expect(csp).not.toContain("'unsafe-inline'");
     expect(csp).not.toContain("'unsafe-eval'");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(prodHeaders["X-Content-Type-Options"]).toBe("nosniff");
     expect(prodHeaders["X-Frame-Options"]).toBe("DENY");
     expect(prodHeaders["Permissions-Policy"]).toContain("geolocation=(self)");
     expect(prodHeaders["Strict-Transport-Security"]).toContain("max-age=63072000");
+    expect(prodHeaders["Cross-Origin-Opener-Policy"]).toBe("same-origin");
+    expect(prodHeaders["Cross-Origin-Resource-Policy"]).toBe("same-origin");
+    expect(prodHeaders["X-DNS-Prefetch-Control"]).toBe("off");
   });
 });

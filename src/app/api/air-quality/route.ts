@@ -29,9 +29,5 @@ export const GET = withApiHandler("air-quality", async (request): Promise<NextRe
   if (!result.ok) {
     return responseFromResult(result);
   }
-  const cacheHeader =
-    parsed.cityKey === undefined
-      ? "private, no-store"
-      : "public, max-age=120, stale-while-revalidate=300";
-  return responseFromResult(ok({ report: result.value }), cacheHeader);
+  return responseFromResult(ok({ report: result.value }));
 });

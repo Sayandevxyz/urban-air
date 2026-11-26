@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { DAILY_LLM_WINDOW_MS } from "@/lib/constants";
 import { getEnv } from "@/lib/env";
 import { AppError, toSafeErrorResponse, type Result } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -6,6 +7,7 @@ import { OpenMeteoAirQualityProvider, OpenMeteoGeocodingProvider } from "@/servi
 import { InMemoryTokenBucketRateLimiter, type RateLimiter } from "@/services/rate-limit";
 
 let rateLimiterSingleton: InMemoryTokenBucketRateLimiter | undefined;
+let dailyLlmLimiterSingleton: InMemoryTokenBucketRateLimiter | undefined;
 let geocodingProviderSingleton: OpenMeteoGeocodingProvider | undefined;
 let airQualityProviderSingleton: OpenMeteoAirQualityProvider | undefined;
 
@@ -24,11 +26,27 @@ export function getRateLimiter(): RateLimiter {
 }
 
 /**
+ * Returns the shared daily per-IP limiter capping /api/chat LLM invocations over 24 hours.
+ */
+export function getDailyLlmRateLimiter(): RateLimiter {
+  if (!dailyLlmLimiterSingleton) {
+    const env = getEnv();
+    dailyLlmLimiterSingleton = new InMemoryTokenBucketRateLimiter({
+      maxRequests: env.DAILY_LLM_MAX_REQUESTS,
+      windowMs: DAILY_LLM_WINDOW_MS,
+    });
+  }
+  return dailyLlmLimiterSingleton;
+}
+
+/**
  * Resets the shared rate limiter state (intended for deterministic tests).
  */
 export function resetRateLimiter(): void {
   rateLimiterSingleton?.reset();
   rateLimiterSingleton = undefined;
+  dailyLlmLimiterSingleton?.reset();
+  dailyLlmLimiterSingleton = undefined;
 }
 
 /**

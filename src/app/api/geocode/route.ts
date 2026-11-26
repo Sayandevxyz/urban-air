@@ -19,8 +19,5 @@ export const GET = withApiHandler("geocode", async (request): Promise<NextRespon
   if (!result.ok) {
     return responseFromResult(result);
   }
-  return responseFromResult(
-    ok({ results: result.value, source: "open-meteo" }),
-    "public, max-age=300, stale-while-revalidate=3600",
-  );
+  return responseFromResult(ok({ results: result.value, source: "open-meteo" }));
 });
