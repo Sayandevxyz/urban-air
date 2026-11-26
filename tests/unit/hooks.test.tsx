@@ -318,4 +318,29 @@ describe("custom client hooks", () => {
     });
     expect(result.current.rules.some((r) => r.id === addedId)).toBe(false);
   });
+
+  it("switches demo cities cleanly without redundant mount fetches", () => {
+    const locations = getDemoCityLocations();
+    const { result: aqDemo } = renderHook(() => useAirQualityData(true));
+    expect(aqDemo.current.loadState).toBe("ready");
+    expect(aqDemo.current.report?.location.key).toBe("delhi");
+
+    const london = locations[3];
+    if (london) {
+      act(() => {
+        aqDemo.current.selectCity(london);
+      });
+      expect(aqDemo.current.report?.location.key).toBe("london");
+    }
+
+    const { result: cmpDemo } = renderHook(() => useCityComparison(true));
+    expect(cmpDemo.current.cities).toHaveLength(2);
+    if (london) {
+      act(() => {
+        cmpDemo.current.addCity(london);
+      });
+      expect(cmpDemo.current.cities).toHaveLength(3);
+      expect(cmpDemo.current.reports.london?.location.key).toBe("london");
+    }
+  });
 });

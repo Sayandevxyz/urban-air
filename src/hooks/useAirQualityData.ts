@@ -58,6 +58,7 @@ export function useAirQualityData(initialDemoMode: boolean) {
     "none" | "locating" | "locationDenied" | "locationUnavailable"
   >("none");
   const abortRef = useRef<AbortController | null>(null);
+  const skipInitialDemoRef = useRef(initialDemoMode);
 
   const fetchForLocation = useCallback(async (location: CityLocation, useDemo: boolean) => {
     abortRef.current?.abort();
@@ -137,6 +138,10 @@ export function useAirQualityData(initialDemoMode: boolean) {
   }, []);
 
   useEffect(() => {
+    if (skipInitialDemoRef.current) {
+      skipInitialDemoRef.current = false;
+      return;
+    }
     if (selectedCity) {
       void fetchForLocation(selectedCity, demoMode);
     } else {

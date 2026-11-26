@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AirQualityReport, CityLocation } from "@/domain/types";
 import { MAX_COMPARE_CITIES } from "@/lib/constants";
 import { getDemoAirQualityReport, getDemoCityLocations } from "@/services/demo-data";
@@ -19,6 +19,7 @@ export function useCityComparison(demoMode: boolean) {
     return initial;
   });
   const [loading, setLoading] = useState(false);
+  const skipInitialDemoRef = useRef(demoMode);
 
   const fetchCitiesParallel = useCallback(
     async (targetCities: readonly CityLocation[], isDemo: boolean) => {
@@ -79,6 +80,10 @@ export function useCityComparison(demoMode: boolean) {
   );
 
   useEffect(() => {
+    if (skipInitialDemoRef.current) {
+      skipInitialDemoRef.current = false;
+      return;
+    }
     void fetchCitiesParallel(cities, demoMode);
   }, [cities, demoMode, fetchCitiesParallel]);
 
