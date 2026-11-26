@@ -4,6 +4,9 @@
   "private": true,
   "description": "GenAI-powered Urban Air Quality Assistant helping families and communities navigate severe winter smog and urban air pollution.",
   "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

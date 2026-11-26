@@ -28,6 +28,9 @@ jobs:
           node-version: "22"
           cache: "npm"
 
+      - name: Guard package-lock.json sync
+        run: npm ci --dry-run
+
       - name: Install dependencies
         run: npm ci
 
