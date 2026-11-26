@@ -47,7 +47,6 @@ export function CityCompareSection({
   return (
     <section
       id="compare"
-      aria-labelledby="compare-heading"
       className="rounded-xl border border-borderc bg-surface-elevated p-4 shadow-sm sm:p-6"
     >
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -66,7 +65,7 @@ export function CityCompareSection({
               onChange={(event) => {
                 setCandidateKey(event.target.value);
               }}
-              className="mt-1 min-h-[44px] rounded-lg border-2 border-borderc-strong bg-surface px-3 py-2 text-base text-ink"
+              className="mt-1 min-h-[44px] max-w-full rounded-lg border-2 border-borderc-strong bg-surface px-3 py-2 text-base text-ink"
             >
               {availablePresets.map((city) => (
                 <option key={city.key} value={city.key}>
@@ -96,11 +95,14 @@ export function CityCompareSection({
         <div
           tabIndex={0}
           role="region"
-          aria-labelledby="compare-heading"
+          aria-labelledby="compare-table-caption"
           aria-busy={loading}
-          className="mt-4 overflow-x-auto rounded-lg border border-borderc"
+          className="relative mt-4 overflow-x-auto rounded-lg border border-borderc"
         >
           <table className="w-full border-collapse text-left text-sm">
+            <caption id="compare-table-caption" className="p-2.5 text-left font-semibold text-ink">
+              {t("sectionTitle")}
+            </caption>
             <thead className="bg-surface-muted text-ink">
               <tr>
                 <th scope="col" className="p-3 font-bold">
@@ -121,7 +123,7 @@ export function CityCompareSection({
                 <th scope="col" className="p-3 font-bold">
                   {t("bestHourCol")}
                 </th>
-                <th scope="col" className="p-3 font-bold">
+                <th scope="col" className="relative p-3 font-bold">
                   <span className="visually-hidden">Actions</span>
                 </th>
               </tr>

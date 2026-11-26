@@ -43,5 +43,18 @@ describe("InMemoryTokenBucketRateLimiter", () => {
     const limiter = new InMemoryTokenBucketRateLimiter({ maxRequests: 1, windowMs: 60_000 });
     await enforceRateLimit(limiter, headers, "test");
     await expect(enforceRateLimit(limiter, headers, "test")).rejects.toThrow(AppError);
+
+    let now = 0;
+    const bounded = new InMemoryTokenBucketRateLimiter({
+      maxRequests: 2,
+      windowMs: 1_000,
+      maxBuckets: 2,
+      now: () => now,
+    });
+    await bounded.consume("k1");
+    await bounded.consume("k2");
+    await bounded.consume("k3");
+    now += 2_000;
+    await bounded.consume("k4");
   });
 });

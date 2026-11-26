@@ -68,7 +68,6 @@ export function RoutinesImpactSection({ report, profile }: RoutinesImpactSection
   return (
     <section
       id="routines"
-      aria-labelledby="routines-heading"
       className="space-y-6 rounded-xl border border-borderc bg-surface-elevated p-4 shadow-sm sm:p-6"
     >
       <div>

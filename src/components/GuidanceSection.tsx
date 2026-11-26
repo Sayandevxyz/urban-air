@@ -31,6 +31,50 @@ const COMMUTE_OPTIONS: readonly CommuteMode[] = ["car", "transit", "two_wheeler"
 const ENERGY_OPTIONS: readonly HomeEnergyMode[] = ["gas_biomass", "electric_induction"];
 const FILTRATION_OPTIONS: readonly FiltrationMode[] = ["none", "hepa", "diy_box_fan"];
 
+function ProfileSelect<T extends string>({
+  id,
+  name,
+  label,
+  value,
+  options,
+  labelFor,
+  onSelect,
+}: {
+  readonly id: string;
+  readonly name: string;
+  readonly label: string;
+  readonly value: T;
+  readonly options: readonly T[];
+  readonly labelFor: (option: T) => string;
+  readonly onSelect: (next: T) => void;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-semibold text-ink">
+        {label}
+      </label>
+      <select
+        id={id}
+        name={name}
+        value={value}
+        onChange={(event) => {
+          const matched = options.find((item) => item === event.target.value);
+          if (matched !== undefined) {
+            onSelect(matched);
+          }
+        }}
+        className="mt-1 min-h-[48px] w-full rounded-lg border-2 border-borderc-strong bg-surface-elevated px-3 py-2 text-base text-ink"
+      >
+        {options.map((opt) => (
+          <option key={opt} value={opt}>
+            {labelFor(opt)}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 /**
  * Renders personalized household guidance (mask, windows, activity) and contextual indoor air hacks.
  */
@@ -49,7 +93,6 @@ export function GuidanceSection({ report, profile, onChangeProfile }: GuidanceSe
   return (
     <section
       id="guidance"
-      aria-labelledby="guidance-heading"
       className="rounded-xl border border-borderc bg-surface-elevated p-4 shadow-sm sm:p-6"
     >
       <h2 id="guidance-heading" className="text-xl font-bold text-ink">
@@ -60,93 +103,50 @@ export function GuidanceSection({ report, profile, onChangeProfile }: GuidanceSe
         <legend className="px-2 text-sm font-bold text-ink">{t("profileLegend")}</legend>
 
         <div className="mt-2 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <label htmlFor="persona-select" className="block text-sm font-semibold text-ink">
-              {t("personaLabel")}
-            </label>
-            <select
-              id="persona-select"
-              name="persona"
-              value={profile.persona}
-              onChange={(event) => {
-                const next = PERSONA_OPTIONS.find((item) => item === event.target.value);
-                if (next) onChangeProfile({ ...profile, persona: next });
-              }}
-              className="mt-1 min-h-[48px] w-full rounded-lg border-2 border-borderc-strong bg-surface-elevated px-3 py-2 text-base text-ink"
-            >
-              {PERSONA_OPTIONS.map((p) => (
-                <option key={p} value={p}>
-                  {t(`personas.${p}`)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="commute-select" className="block text-sm font-semibold text-ink">
-              {t("commuteLabel")}
-            </label>
-            <select
-              id="commute-select"
-              name="commuteMode"
-              value={profile.commuteMode}
-              onChange={(event) => {
-                const next = COMMUTE_OPTIONS.find((item) => item === event.target.value);
-                if (next) onChangeProfile({ ...profile, commuteMode: next });
-              }}
-              className="mt-1 min-h-[48px] w-full rounded-lg border-2 border-borderc-strong bg-surface-elevated px-3 py-2 text-base text-ink"
-            >
-              {COMMUTE_OPTIONS.map((c) => (
-                <option key={c} value={c}>
-                  {t(`commutes.${c}`)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="energy-select" className="block text-sm font-semibold text-ink">
-              {t("energyLabel")}
-            </label>
-            <select
-              id="energy-select"
-              name="homeEnergyMode"
-              value={profile.homeEnergyMode}
-              onChange={(event) => {
-                const next = ENERGY_OPTIONS.find((item) => item === event.target.value);
-                if (next) onChangeProfile({ ...profile, homeEnergyMode: next });
-              }}
-              className="mt-1 min-h-[48px] w-full rounded-lg border-2 border-borderc-strong bg-surface-elevated px-3 py-2 text-base text-ink"
-            >
-              {ENERGY_OPTIONS.map((e) => (
-                <option key={e} value={e}>
-                  {t(`energies.${e}`)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="filtration-select" className="block text-sm font-semibold text-ink">
-              {t("filtrationLabel")}
-            </label>
-            <select
-              id="filtration-select"
-              name="filtrationMode"
-              value={profile.filtrationMode}
-              onChange={(event) => {
-                const next = FILTRATION_OPTIONS.find((item) => item === event.target.value);
-                if (next) onChangeProfile({ ...profile, filtrationMode: next });
-              }}
-              className="mt-1 min-h-[48px] w-full rounded-lg border-2 border-borderc-strong bg-surface-elevated px-3 py-2 text-base text-ink"
-            >
-              {FILTRATION_OPTIONS.map((f) => (
-                <option key={f} value={f}>
-                  {t(`filtrations.${f}`)}
-                </option>
-              ))}
-            </select>
-          </div>
+          <ProfileSelect
+            id="persona-select"
+            name="persona"
+            label={t("personaLabel")}
+            value={profile.persona}
+            options={PERSONA_OPTIONS}
+            labelFor={(opt) => t(`personas.${opt}`)}
+            onSelect={(next) => {
+              onChangeProfile({ ...profile, persona: next });
+            }}
+          />
+          <ProfileSelect
+            id="commute-select"
+            name="commuteMode"
+            label={t("commuteLabel")}
+            value={profile.commuteMode}
+            options={COMMUTE_OPTIONS}
+            labelFor={(opt) => t(`commutes.${opt}`)}
+            onSelect={(next) => {
+              onChangeProfile({ ...profile, commuteMode: next });
+            }}
+          />
+          <ProfileSelect
+            id="energy-select"
+            name="homeEnergyMode"
+            label={t("energyLabel")}
+            value={profile.homeEnergyMode}
+            options={ENERGY_OPTIONS}
+            labelFor={(opt) => t(`energies.${opt}`)}
+            onSelect={(next) => {
+              onChangeProfile({ ...profile, homeEnergyMode: next });
+            }}
+          />
+          <ProfileSelect
+            id="filtration-select"
+            name="filtrationMode"
+            label={t("filtrationLabel")}
+            value={profile.filtrationMode}
+            options={FILTRATION_OPTIONS}
+            labelFor={(opt) => t(`filtrations.${opt}`)}
+            onSelect={(next) => {
+              onChangeProfile({ ...profile, filtrationMode: next });
+            }}
+          />
         </div>
       </fieldset>
 

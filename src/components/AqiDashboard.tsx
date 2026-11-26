@@ -38,12 +38,7 @@ export function AqiDashboard({ report }: AqiDashboardProps) {
         : tDash("sourceOpenMeteo");
 
   return (
-    <section
-      id="dashboard"
-      aria-labelledby="dashboard-heading"
-      className="space-y-5"
-      aria-live="polite"
-    >
+    <section id="dashboard" className="space-y-5" aria-live="polite">
       {smog.isWinterSmogAlert && (
         <div
           role="alert"

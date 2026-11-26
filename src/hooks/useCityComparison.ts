@@ -65,6 +65,12 @@ export function useCityComparison(demoMode: boolean) {
           next[key] = value;
         }
         setReports(next);
+      } catch {
+        const fallback: Record<string, AirQualityReport> = {};
+        for (const city of targetCities) {
+          fallback[city.key] = getDemoAirQualityReport(city);
+        }
+        setReports(fallback);
       } finally {
         setLoading(false);
       }

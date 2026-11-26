@@ -43,9 +43,12 @@ describe("AI assistant security, prompt injection defense, and grounding", () =>
   });
 
   afterEach(() => {
-    process.env.GEMINI_API_KEY = prevGemini;
-    process.env.ANTHROPIC_API_KEY = prevAnthropic;
-    process.env.LLM_PROVIDER = prevProvider;
+    if (prevGemini === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = prevGemini;
+    if (prevAnthropic === undefined) delete process.env.ANTHROPIC_API_KEY;
+    else process.env.ANTHROPIC_API_KEY = prevAnthropic;
+    if (prevProvider === undefined) delete process.env.LLM_PROVIDER;
+    else process.env.LLM_PROVIDER = prevProvider;
     resetEnvCache();
   });
 
@@ -106,5 +109,12 @@ describe("AI assistant security, prompt injection defense, and grounding", () =>
       BASE_PAYLOAD,
     );
     expect(routineFocus).toContain("1300 g CO2e");
+
+    // Provider = fallback ignores keys
+    process.env.LLM_PROVIDER = "fallback";
+    process.env.GEMINI_API_KEY = "super-secret-token-value-99";
+    resetEnvCache();
+    const forcedFallback = await answerAirQualityQuestion(BASE_PAYLOAD);
+    expect(forcedFallback.engine).toBe("fallback");
   });
 });

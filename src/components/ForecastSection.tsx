@@ -48,7 +48,6 @@ export function ForecastSection({ report }: ForecastSectionProps) {
   return (
     <section
       id="forecast"
-      aria-labelledby="forecast-heading"
       className="rounded-xl border border-borderc bg-surface-elevated p-4 shadow-sm sm:p-6"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -57,7 +56,7 @@ export function ForecastSection({ report }: ForecastSectionProps) {
         </h2>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div role="group" aria-label={t("sectionTitle")} className="flex gap-2">
+          <div role="group" aria-label={t("sectionTitle")} className="flex flex-wrap gap-2">
             <button
               type="button"
               aria-pressed={activeRange === "hourly"}

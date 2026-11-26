@@ -135,6 +135,71 @@ describe("integration: API routes with MSW", () => {
 
     const unknownCity = await getAirQuality(buildRequest("/api/air-quality?cityKey=atlantis"));
     expect(unknownCity.status).toBe(404);
+
+    const missingParams = await getAirQuality(buildRequest("/api/air-quality"));
+    expect(missingParams.status).toBe(400);
+
+    const customCoords = await getAirQuality(buildRequest("/api/air-quality?lat=28.61&lon=77.21"));
+    expect(customCoords.status).toBe(200);
+
+    mswServer.use(
+      http.get("https://geocoding-api.open-meteo.com/v1/search", () =>
+        HttpResponse.json({
+          results: [{ id: 9, name: "SparseTown", latitude: 10.1234, longitude: 20.5678 }],
+        }),
+      ),
+      http.get("https://air-quality-api.open-meteo.com/v1/air-quality", ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.has("current")) {
+          return HttpResponse.json({
+            current: { time: "2026-11-26T08:00", us_aqi: null, european_aqi: null, pm2_5: 12 },
+          });
+        }
+        return HttpResponse.json({
+          hourly: {
+            time: [
+              "2026-11-20T08:00",
+              "2026-11-21T08:00",
+              "2026-11-22T08:00",
+              "2026-11-23T08:00",
+              "2026-11-24T08:00",
+              "2026-11-25T08:00",
+              "2026-11-26T08:00",
+              "2026-11-27T08:00",
+            ],
+            pm2_5: [12, 14, 16, 18, 20, 22, 24, 26],
+          },
+        });
+      }),
+    );
+    const sparseGeo = await getGeocode(buildRequest("/api/geocode?q=SparseTown"));
+    expect(sparseGeo.status).toBe(200);
+    const sparseAq = await getAirQuality(buildRequest("/api/air-quality?lat=10.12&lon=20.57"));
+    expect(sparseAq.status).toBe(200);
+
+    mswServer.use(
+      http.get("https://air-quality-api.open-meteo.com/v1/air-quality", ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.has("current")) {
+          return HttpResponse.json({ err: true }, { status: 503 });
+        }
+        return HttpResponse.json({ hourly: { time: [] } });
+      }),
+    );
+    const aqFailCurrent = await getAirQuality(buildRequest("/api/air-quality?lat=11.11&lon=22.22"));
+    expect(aqFailCurrent.status).toBe(502);
+
+    mswServer.use(
+      http.get("https://air-quality-api.open-meteo.com/v1/air-quality", ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.has("current")) {
+          return HttpResponse.json({ current: { time: "2026-11-26T08:00", pm2_5: 10 } });
+        }
+        return HttpResponse.json({ err: true }, { status: 503 });
+      }),
+    );
+    const aqFailHourly = await getAirQuality(buildRequest("/api/air-quality?lat=12.12&lon=23.23"));
+    expect(aqFailHourly.status).toBe(502);
   });
 
   it("maps upstream 5xx, 429, malformed JSON, and timeouts to safe error responses", async () => {
@@ -181,7 +246,8 @@ describe("integration: API routes with MSW", () => {
     }, 50);
     const aborted = await getGeocode(req);
     expect(aborted.status).toBe(502);
-    process.env.RATE_LIMIT_MAX_REQUESTS = prevTimeout;
+    if (prevTimeout === undefined) delete process.env.RATE_LIMIT_MAX_REQUESTS;
+    else process.env.RATE_LIMIT_MAX_REQUESTS = prevTimeout;
   });
 
   it("enforces per-IP rate limiting with 429 and Retry-After header", async () => {
@@ -199,7 +265,8 @@ describe("integration: API routes with MSW", () => {
     expect(r3.status).toBe(429);
     expect(r3.headers.get("Retry-After")).toBeTruthy();
 
-    process.env.RATE_LIMIT_MAX_REQUESTS = prevMax;
+    if (prevMax === undefined) delete process.env.RATE_LIMIT_MAX_REQUESTS;
+    else process.env.RATE_LIMIT_MAX_REQUESTS = prevMax;
     resetEnvCache();
     resetRateLimiter();
   });

@@ -71,6 +71,16 @@ describe("SwrMemoryCache", () => {
 
     now += 25_000;
     await cache.getOrFetch("b", policy, () => Promise.resolve("B2"));
+
+    // Background revalidation error is logged safely without crashing caller
+    const errPolicy = { ttlMs: 1_000, staleTtlMs: 5_000 };
+    await cache.getOrFetch("bg", errPolicy, () => Promise.resolve("ok"));
+    now += 2_000;
+    const staleWhileErr = await cache.getOrFetch("bg", errPolicy, () =>
+      Promise.reject(new Error("bg fail")),
+    );
+    expect(staleWhileErr).toBe("ok");
+
     cache.clear();
     expect(cache.size()).toBe(0);
   });

@@ -122,7 +122,6 @@ export function AirQualityChat({ report, profile }: AirQualityChatProps) {
   return (
     <section
       id="assistant"
-      aria-labelledby="assistant-heading"
       className="rounded-xl border border-borderc bg-surface-elevated p-4 shadow-sm sm:p-6"
     >
       <h2 id="assistant-heading" className="text-xl font-bold text-ink">

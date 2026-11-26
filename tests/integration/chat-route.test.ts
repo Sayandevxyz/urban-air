@@ -84,9 +84,12 @@ describe("integration: POST /api/chat", () => {
 
   afterEach(() => {
     mswServer.resetHandlers();
-    process.env.GEMINI_API_KEY = prevGemini;
-    process.env.ANTHROPIC_API_KEY = prevAnthropic;
-    process.env.LLM_PROVIDER = prevProvider;
+    if (prevGemini === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = prevGemini;
+    if (prevAnthropic === undefined) delete process.env.ANTHROPIC_API_KEY;
+    else process.env.ANTHROPIC_API_KEY = prevAnthropic;
+    if (prevProvider === undefined) delete process.env.LLM_PROVIDER;
+    else process.env.LLM_PROVIDER = prevProvider;
     resetEnvCache();
   });
 
@@ -112,6 +115,32 @@ describe("integration: POST /api/chat", () => {
 
     mswServer.use(
       http.post("https://generativelanguage.googleapis.com/v1beta/models/*", () =>
+        HttpResponse.json({
+          candidates: [
+            {
+              content: {
+                parts: [{ text: "Secret leak test-gemini-secret-key-12345" }],
+              },
+            },
+          ],
+        }),
+      ),
+    );
+    const redactedRes = await postChat(makeChatReq(VALID_BODY));
+    const redactedJson = (await redactedRes.json()) as { reply: string };
+    expect(redactedJson.reply).not.toContain("test-gemini-secret-key-12345");
+    expect(redactedJson.reply).toContain("[REDACTED]");
+
+    mswServer.use(
+      http.post("https://generativelanguage.googleapis.com/v1beta/models/*", () =>
+        HttpResponse.json({ candidates: [] }),
+      ),
+    );
+    const emptyCandRes = await postChat(makeChatReq(VALID_BODY));
+    expect(((await emptyCandRes.json()) as { engine: string }).engine).toBe("fallback");
+
+    mswServer.use(
+      http.post("https://generativelanguage.googleapis.com/v1beta/models/*", () =>
         HttpResponse.json({ error: "unavailable" }, { status: 503 }),
       ),
     );
@@ -121,7 +150,7 @@ describe("integration: POST /api/chat", () => {
     expect(fallbackJson.engine).toBe("fallback");
   });
 
-  it("calls Anthropic when configured and handles invalid JSON / oversized payloads", async () => {
+  it("calls Anthropic when configured and handles upstream error, invalid JSON, and oversized payloads", async () => {
     process.env.ANTHROPIC_API_KEY = "test-anthropic-secret-key-12345";
     process.env.LLM_PROVIDER = "anthropic";
     resetEnvCache();
@@ -132,10 +161,21 @@ describe("integration: POST /api/chat", () => {
     expect(json.engine).toBe("anthropic");
     expect(json.reply).toContain("224");
 
+    mswServer.use(
+      http.post("https://api.anthropic.com/v1/messages", () =>
+        HttpResponse.json({ error: "down" }, { status: 503 }),
+      ),
+    );
+    const antFallback = await postChat(makeChatReq(VALID_BODY));
+    expect(((await antFallback.json()) as { engine: string }).engine).toBe("fallback");
+
     const badJson = await postChat(makeChatReq("{broken"));
     expect(badJson.status).toBe(400);
 
     const oversized = await postChat(makeChatReq({ ...VALID_BODY, message: "x".repeat(600) }));
     expect(oversized.status).toBe(400);
+
+    const tooLargeBody = await postChat(makeChatReq("x".repeat(17_000)));
+    expect(tooLargeBody.status).toBe(413);
   });
 });

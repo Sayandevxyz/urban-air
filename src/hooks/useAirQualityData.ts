@@ -101,7 +101,7 @@ export function useAirQualityData(initialDemoMode: boolean) {
       const res = await fetch(`/api/air-quality?${params.toString()}`, {
         signal: controller.signal,
       });
-      const data = (await res.json()) as AirQualityApiResponse;
+      const data = (await res.json().catch(() => ({}))) as AirQualityApiResponse;
 
       if (res.status === 429) {
         setRetryAfterSeconds(data.error?.retryAfterSeconds ?? 30);
@@ -159,13 +159,15 @@ export function useAirQualityData(initialDemoMode: boolean) {
   }, [demoMode, fetchForLocation, selectedCity]);
 
   const requestUserLocation = useCallback(() => {
-    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
+    const geo: Partial<Geolocation> | undefined =
+      typeof navigator !== "undefined" ? navigator.geolocation : undefined;
+    if (typeof geo?.getCurrentPosition !== "function") {
       setGeoStatusMessageKey("locationUnavailable");
       return;
     }
 
     setGeoStatusMessageKey("locating");
-    navigator.geolocation.getCurrentPosition(
+    geo.getCurrentPosition(
       (position) => {
         setGeoStatusMessageKey("none");
         const customLoc: CityLocation = {

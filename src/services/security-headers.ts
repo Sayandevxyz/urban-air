@@ -18,9 +18,10 @@ export function buildSecurityHeaders(
   nonce: string,
   isDev: boolean,
 ): Readonly<Record<string, string>> {
+  // Keep `'self'` active alongside per-request nonces so Next.js `next/dynamic` preload links load without `'unsafe-inline'`.
   const scriptSrc = isDev
-    ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`
-    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`;
+    ? `script-src 'self' 'nonce-${nonce}' 'unsafe-eval'`
+    : `script-src 'self' 'nonce-${nonce}'`;
 
   const csp = [
     "default-src 'self'",

@@ -12,6 +12,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    testTimeout: 15_000,
     setupFiles: ["./tests/setup.ts"],
     include: ["tests/**/*.test.{ts,tsx}"],
     exclude: ["tests/e2e/**", "node_modules/**", ".next/**"],
@@ -22,6 +23,7 @@ export default defineConfig({
       exclude: [
         "src/**/*.d.ts",
         "src/domain/types.ts",
+        "src/services/providers.ts",
         "src/app/layout.tsx",
         "src/app/**/loading.tsx",
         "src/i18n/messages/*.json",

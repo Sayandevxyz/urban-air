@@ -64,7 +64,6 @@ export function ThresholdAlertsSection({
   return (
     <section
       id="alerts"
-      aria-labelledby="alerts-heading"
       className="rounded-xl border border-borderc bg-surface-elevated p-4 shadow-sm sm:p-6"
     >
       <h2 id="alerts-heading" className="text-xl font-bold text-ink">
@@ -92,7 +91,11 @@ export function ThresholdAlertsSection({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="mt-4 grid gap-4 sm:grid-cols-4 sm:items-end">
+      <form
+        onSubmit={handleSubmit}
+        noValidate
+        className="mt-4 grid gap-4 sm:grid-cols-4 sm:items-end"
+      >
         <div>
           <label htmlFor="alert-city-select" className="block text-sm font-semibold text-ink">
             {t("cityLabel")}

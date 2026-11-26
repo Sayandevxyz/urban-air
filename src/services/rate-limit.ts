@@ -32,14 +32,21 @@ export class InMemoryTokenBucketRateLimiter implements RateLimiter {
   private readonly capacity: number;
   private readonly refillRatePerMs: number;
   private readonly windowMs: number;
+  private readonly maxBuckets: number;
   private readonly now: () => number;
 
   /**
    * Configures token capacity and refill rate across the specified rolling window.
    */
-  public constructor(options: { maxRequests: number; windowMs: number; now?: () => number }) {
+  public constructor(options: {
+    maxRequests: number;
+    windowMs: number;
+    maxBuckets?: number;
+    now?: () => number;
+  }) {
     this.capacity = Math.max(1, options.maxRequests);
     this.windowMs = Math.max(1_000, options.windowMs);
+    this.maxBuckets = Math.max(1, options.maxBuckets ?? MAX_BUCKET_ENTRIES);
     this.refillRatePerMs = this.capacity / this.windowMs;
     this.now = options.now ?? (() => Date.now());
   }
@@ -88,7 +95,7 @@ export class InMemoryTokenBucketRateLimiter implements RateLimiter {
       return existing;
     }
 
-    if (this.buckets.size >= MAX_BUCKET_ENTRIES) {
+    if (this.buckets.size >= this.maxBuckets) {
       this.pruneOldest(currentTime);
     }
 
@@ -102,7 +109,7 @@ export class InMemoryTokenBucketRateLimiter implements RateLimiter {
       if (currentTime - state.lastRefillMs > this.windowMs) {
         this.buckets.delete(bucketKey);
       }
-      if (this.buckets.size < MAX_BUCKET_ENTRIES) {
+      if (this.buckets.size < this.maxBuckets) {
         return;
       }
     }

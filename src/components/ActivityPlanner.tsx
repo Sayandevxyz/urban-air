@@ -25,10 +25,7 @@ export function ActivityPlanner({ report, persona }: ActivityPlannerProps) {
   );
 
   return (
-    <section
-      aria-labelledby="planner-heading"
-      className="rounded-xl border border-borderc bg-surface-elevated p-4 shadow-sm sm:p-6"
-    >
+    <section className="rounded-xl border border-borderc bg-surface-elevated p-4 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="planner-heading" className="text-xl font-bold text-ink">
           {t("sectionTitle")}

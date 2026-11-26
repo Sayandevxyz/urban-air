@@ -36,7 +36,11 @@ describe("logger and privacy redaction", () => {
     expect(stdoutSpy).toHaveBeenCalledTimes(1);
     expect(String(stdoutSpy.mock.calls[0]?.[0])).toContain("11.02");
 
-    process.env.LOG_LEVEL = prev;
+    if (prev === undefined) {
+      delete process.env.LOG_LEVEL;
+    } else {
+      process.env.LOG_LEVEL = prev;
+    }
     stdoutSpy.mockRestore();
   });
 });

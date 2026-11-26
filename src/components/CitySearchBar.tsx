@@ -70,15 +70,12 @@ export function CitySearchBar({
   };
 
   return (
-    <section
-      aria-labelledby="city-search-heading"
-      className="rounded-xl border border-borderc bg-surface-elevated p-4 shadow-sm sm:p-5"
-    >
+    <section className="rounded-xl border border-borderc bg-surface-elevated p-4 shadow-sm sm:p-5">
       <h2 id="city-search-heading" className="text-lg font-bold text-ink">
         {t("heading")}
       </h2>
 
-      <search className="mt-3">
+      <div role="search" className="mt-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="relative flex-1">
             <label htmlFor="city-search-input" className="block text-sm font-semibold text-ink">
@@ -173,7 +170,7 @@ export function CitySearchBar({
             <span>{geoStatusMessageKey === "locating" ? t("locating") : t("useLocation")}</span>
           </button>
         </div>
-      </search>
+      </div>
 
       <div aria-live="polite" className="mt-2 min-h-[1.25rem]">
         {geoStatusMessageKey === "locationDenied" && (
