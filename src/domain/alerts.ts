@@ -1,4 +1,5 @@
-import type { AirQualityReport, ThresholdAlertRule, TriggeredAlert } from "@/domain/types";
+import type { AirQualityReport } from "@/types/air-quality";
+import type { ThresholdAlertRule, TriggeredAlert } from "@/types/guidance";
 
 /**
  * Evaluates enabled user threshold alert rules against loaded air quality snapshots.

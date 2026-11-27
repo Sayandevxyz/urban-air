@@ -1,9 +1,5 @@
-import type {
-  PollutantReadings,
-  ResidentProfile,
-  RoutineAlternative,
-  SmogAssessment,
-} from "@/domain/types";
+import type { PollutantReadings, SmogAssessment } from "@/types/air-quality";
+import type { ResidentProfile, RoutineAlternative } from "@/types/guidance";
 
 export interface RoutinesInput {
   readonly usAqi: number;

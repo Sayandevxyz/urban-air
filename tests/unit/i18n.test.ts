@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { loadLocaleMessages } from "@/i18n/catalog";
-import en from "@/i18n/messages/en.json";
-import hi from "@/i18n/messages/hi.json";
-import ta from "@/i18n/messages/ta.json";
+import { loadLocaleMessages } from "@/components/LocaleContext";
+import en from "@/i18n/en.json";
+import hi from "@/i18n/hi.json";
+import ta from "@/i18n/ta.json";
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { evaluateThresholdAlerts } from "@/domain/alerts";
-import type { AirQualityReport, ThresholdAlertRule, TriggeredAlert } from "@/domain/types";
 import { ALERT_DEFAULT_THRESHOLD } from "@/lib/constants";
-import { safeJsonParse } from "@/lib/json";
+import { safeJsonParse } from "@/lib/errors";
+import type { AirQualityReport } from "@/types/air-quality";
+import type { ThresholdAlertRule, TriggeredAlert } from "@/types/guidance";
 
 const ALERTS_STORAGE_KEY = "urban-air:alerts:v1";
 

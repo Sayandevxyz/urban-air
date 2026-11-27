@@ -1,43 +1,39 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
-import { AppFooter } from "@/components/AppFooter";
 import { AppHeader } from "@/components/AppHeader";
 import { AqiDashboard } from "@/components/AqiDashboard";
 import { CitySearchBar } from "@/components/CitySearchBar";
 import { GuidanceSection } from "@/components/GuidanceSection";
 import { StatusBanner } from "@/components/StatusBanner";
-import type { AirQualityReport, ResidentProfile } from "@/domain/types";
 import { useAirQualityData } from "@/hooks/useAirQualityData";
 import { useCityComparison } from "@/hooks/useCityComparison";
 import { useLocalAlerts } from "@/hooks/useLocalAlerts";
+import type { AirQualityReport } from "@/types/air-quality";
+import type { ResidentProfile } from "@/types/guidance";
 
 const ActivityPlanner = dynamic(
   () => import("@/components/ActivityPlanner").then((m) => m.ActivityPlanner),
   { ssr: true },
 );
-
 const ThresholdAlertsSection = dynamic(
   () => import("@/components/ThresholdAlertsSection").then((m) => m.ThresholdAlertsSection),
   { ssr: true },
 );
-
 const ForecastSection = dynamic(
   () => import("@/components/ForecastSection").then((m) => m.ForecastSection),
   { ssr: true },
 );
-
 const RoutinesImpactSection = dynamic(
   () => import("@/components/RoutinesImpactSection").then((m) => m.RoutinesImpactSection),
   { ssr: true },
 );
-
 const CityCompareSection = dynamic(
   () => import("@/components/CityCompareSection").then((m) => m.CityCompareSection),
   { ssr: true },
 );
-
 const AirQualityChat = dynamic(
   () => import("@/components/AirQualityChat").then((m) => m.AirQualityChat),
   { ssr: true },
@@ -49,6 +45,18 @@ const DEFAULT_PROFILE: ResidentProfile = {
   homeEnergyMode: "gas_biomass",
   filtrationMode: "none",
 };
+
+function WorkbenchFooter() {
+  const t = useTranslations("app");
+  return (
+    <footer className="mt-10 border-t border-borderc bg-surface-elevated">
+      <div className="mx-auto max-w-6xl space-y-1 px-4 py-6 text-sm text-ink-muted">
+        <p className="font-medium text-ink">{t("disclaimerShort")}</p>
+        <p>{t("footerNote")}</p>
+      </div>
+    </footer>
+  );
+}
 
 /**
  * Interactive root client workbench orchestrating city lookup, live AQI, guidance, routines, and alerts.
@@ -122,7 +130,7 @@ export function UrbanAirWorkbench({ defaultDemoMode }: { readonly defaultDemoMod
         />
       </main>
 
-      <AppFooter />
+      <WorkbenchFooter />
     </div>
   );
 }

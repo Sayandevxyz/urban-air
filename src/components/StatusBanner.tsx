@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import type { LoadState } from "@/hooks/useAirQualityData";
+import type { LoadState } from "@/types/api";
 
 interface StatusBannerProps {
   readonly state: LoadState;

@@ -1,4 +1,4 @@
-import type { PollutantKey, PollutantReadings } from "@/domain/types";
+import type { PollutantKey, PollutantReadings } from "@/types/air-quality";
 
 /**
  * Ordered list of supported urban air pollutants evaluated across dashboard and guidance.

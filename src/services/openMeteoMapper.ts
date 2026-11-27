@@ -1,17 +1,17 @@
 import { z } from "zod";
 import { computeCompositeUsAqi, estimateEuropeanAqiFromPollutants } from "@/domain/aqiBreakpoints";
+import {
+  COORDINATE_CACHE_DECIMALS,
+  FORECAST_HOURS_WINDOW,
+  TREND_DAYS_WINDOW,
+} from "@/lib/constants";
 import type {
   AirQualityReport,
   CityLocation,
   DailyTrendPoint,
   HourlyForecastPoint,
   PollutantReadings,
-} from "@/domain/types";
-import {
-  COORDINATE_CACHE_DECIMALS,
-  FORECAST_HOURS_WINDOW,
-  TREND_DAYS_WINDOW,
-} from "@/lib/constants";
+} from "@/types/air-quality";
 
 export const openMeteoGeocodeSchema = z.object({
   results: z

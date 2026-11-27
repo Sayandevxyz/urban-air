@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AirQualityReport, CityLocation } from "@/domain/types";
-import { fetchAirQuality } from "@/hooks/fetchAirQuality";
+import { fetchAirQuality } from "@/lib/air-quality-client";
 import { MAX_COMPARE_CITIES } from "@/lib/constants";
 import { getDemoAirQualityReport, getDemoCityLocations } from "@/services/demo-data";
+import type { AirQualityReport, CityLocation } from "@/types/air-quality";
 
 function buildDemoReportMap(
   targetCities: readonly CityLocation[],

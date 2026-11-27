@@ -1,58 +1,14 @@
 import type { z } from "zod";
 import {
-  ALLOWED_UPSTREAM_HOSTS,
   MAX_UPSTREAM_RESPONSE_BYTES,
   UPSTREAM_DEFAULT_RETRY_AFTER_SECONDS,
   UPSTREAM_TIMEOUT_MS,
 } from "@/lib/constants";
-import { AppError, err, ok, type Result } from "@/lib/errors";
-import { safeJsonParse } from "@/lib/json";
+import { AppError, err, ok, safeJsonParse, type Result } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { safeResolveUpstreamUrl } from "@/services/ssrf-guard";
+import type { FetchGuardOptions } from "@/types/api";
 
-const PRIVATE_IP_OR_LOCAL_PATTERN =
-  /^(localhost|127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|\[?::1\]?$)/i;
-
-export interface FetchGuardOptions {
-  readonly method?: "GET" | "POST";
-  readonly headers?: Readonly<Record<string, string>>;
-  readonly body?: string;
-  readonly timeoutMs?: number;
-  readonly maxBytes?: number;
-  readonly signal?: AbortSignal | undefined;
-}
-
-/**
- * Validates that an outbound URL targets HTTPS on an explicitly allowlisted host (SSRF defense).
- */
-export function assertAllowedUpstreamUrl(rawUrl: string): URL {
-  let parsed: URL;
-  try {
-    parsed = new URL(rawUrl);
-  } catch {
-    throw new AppError("SSRF_BLOCKED", "Blocked malformed outbound request target.", 400);
-  }
-  if (parsed.protocol !== "https:") {
-    throw new AppError("SSRF_BLOCKED", "Outbound requests must use HTTPS.", 400);
-  }
-  if (parsed.username !== "" || parsed.password !== "") {
-    throw new AppError("SSRF_BLOCKED", "Outbound URLs must not contain embedded credentials.", 400);
-  }
-  const blockedHost =
-    PRIVATE_IP_OR_LOCAL_PATTERN.test(parsed.hostname) ||
-    !ALLOWED_UPSTREAM_HOSTS.includes(parsed.hostname);
-  if (blockedHost) {
-    throw new AppError(
-      "SSRF_BLOCKED",
-      `Outbound host "${parsed.hostname}" is not in the security allowlist.`,
-      400,
-    );
-  }
-  return parsed;
-}
-
-/**
- * Builds the Fetch API RequestInit object from validated options and linked abort signal.
- */
 function buildRequestInit(
   options: FetchGuardOptions | undefined,
   signal: AbortSignal,
@@ -65,9 +21,6 @@ function buildRequestInit(
   };
 }
 
-/**
- * Maps non-OK HTTP responses (429 rate-limit, 5xx/4xx errors) to typed AppError values.
- */
 function mapHttpStatusToError(response: Response): AppError | null {
   if (response.status === 429) {
     const retryRaw = response.headers.get("retry-after");
@@ -88,9 +41,6 @@ function mapHttpStatusToError(response: Response): AppError | null {
   return null;
 }
 
-/**
- * Parses upstream text cleanly with safeJsonParse and validates it against a Zod schema.
- */
 function parseAndValidateBody<T>(
   rawText: string,
   schema: z.ZodType<T>,
@@ -190,17 +140,6 @@ function createLinkedController(timeoutMs: number, externalSignal?: AbortSignal)
   };
 }
 
-function safeResolveUrl(rawUrl: string): Result<URL> {
-  try {
-    return ok(assertAllowedUpstreamUrl(rawUrl));
-  } catch (error) {
-    if (error instanceof AppError) {
-      return err(error);
-    }
-    return err(new AppError("SSRF_BLOCKED", "Blocked outbound request.", 400, { cause: error }));
-  }
-}
-
 function mapFetchException(error: unknown, didTimeout: boolean): AppError {
   if (error instanceof AppError) return error;
   if (didTimeout) {
@@ -219,7 +158,7 @@ export async function fetchJsonWithGuard<T>(
   schema: z.ZodType<T>,
   options?: FetchGuardOptions,
 ): Promise<Result<T>> {
-  const urlResult = safeResolveUrl(rawUrl);
+  const urlResult = safeResolveUpstreamUrl(rawUrl);
   if (!urlResult.ok) return urlResult;
 
   const linked = createLinkedController(options?.timeoutMs ?? UPSTREAM_TIMEOUT_MS, options?.signal);

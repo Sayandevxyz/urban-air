@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { evaluateThresholdAlerts } from "@/domain/alerts";
-import type { AirQualityReport, ThresholdAlertRule } from "@/domain/types";
+import type { AirQualityReport } from "@/types/air-quality";
+import type { ThresholdAlertRule } from "@/types/guidance";
 
 const SAMPLE_REPORT: AirQualityReport = {
   location: {

@@ -9,8 +9,8 @@ import { AppLocaleProvider, useAppLocale } from "@/components/LocaleContext";
 import { StatusBanner } from "@/components/StatusBanner";
 import { ThresholdAlertsSection } from "@/components/ThresholdAlertsSection";
 import { UrbanAirWorkbench } from "@/components/UrbanAirWorkbench";
-import type { ResidentProfile } from "@/domain/types";
 import { getDemoAirQualityReport, getDemoCityLocations } from "@/services/demo-data";
+import type { ResidentProfile } from "@/types/guidance";
 
 const PROFILE: ResidentProfile = {
   persona: "general",

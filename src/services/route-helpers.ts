@@ -1,13 +1,12 @@
 import type { NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
-import type { CityLocation } from "@/domain/types";
 import { COORDINATE_ROUND_FACTOR } from "@/lib/constants";
-import { AppError } from "@/lib/errors";
-import { safeJsonParse } from "@/lib/json";
+import { AppError, safeJsonParse } from "@/lib/errors";
 import { errorResponse, getRateLimiter } from "@/services/container";
 import { getDemoCityLocations } from "@/services/demo-data";
 import { enforceRateLimit } from "@/services/rate-limit";
 import { airQualityQuerySchema, geocodeQuerySchema } from "@/services/schemas";
+import type { CityLocation } from "@/types/air-quality";
 
 const DEFAULT_FALLBACK_LAT = 28.61;
 const DEFAULT_FALLBACK_LON = 77.21;

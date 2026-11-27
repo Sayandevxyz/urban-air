@@ -6,8 +6,8 @@ import { GET as getAirQuality } from "@/app/api/air-quality/route";
 import { GET as getGeocode } from "@/app/api/geocode/route";
 import { GET as getHealth } from "@/app/api/health/route";
 import { resetEnvCache } from "@/lib/env";
-import { sharedServerCache } from "@/services/cache";
 import { resetRateLimiter } from "@/services/container";
+import { clearOpenMeteoCaches } from "@/services/open-meteo";
 
 const mswServer = setupServer(
   http.get("https://geocoding-api.open-meteo.com/v1/search", ({ request }) => {
@@ -78,7 +78,7 @@ describe("integration: API routes with MSW", () => {
 
   beforeEach(() => {
     process.env.TRUST_PROXY = "true";
-    sharedServerCache.clear();
+    clearOpenMeteoCaches();
     resetRateLimiter();
     resetEnvCache();
   });

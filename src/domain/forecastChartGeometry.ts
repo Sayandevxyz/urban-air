@@ -1,5 +1,5 @@
-import type { DailyTrendPoint, HourlyForecastPoint } from "@/domain/types";
 import { CHART_HEADROOM_AQI, DEFAULT_CHART_MAX_AQI } from "@/lib/constants";
+import type { DailyTrendPoint, HourlyForecastPoint } from "@/types/air-quality";
 
 export const CHART_WIDTH = 640;
 export const CHART_HEIGHT = 220;

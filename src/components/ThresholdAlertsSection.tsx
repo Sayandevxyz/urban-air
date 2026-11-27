@@ -2,22 +2,63 @@
 
 import { useTranslations } from "next-intl";
 import { AlertRuleForm } from "@/components/AlertRuleForm";
-import { AlertRuleList } from "@/components/AlertRuleList";
-import type { CityLocation, ThresholdAlertRule, TriggeredAlert } from "@/domain/types";
 import { getDemoCityLocations } from "@/services/demo-data";
+import type { CityLocation } from "@/types/air-quality";
+import type { ThresholdAlertRule, TriggeredAlert } from "@/types/guidance";
 
-interface ThresholdAlertsSectionProps {
-  readonly currentCity: CityLocation | null;
+function AlertRuleList({
+  rules,
+  onToggleRule,
+  onRemoveRule,
+}: {
   readonly rules: readonly ThresholdAlertRule[];
-  readonly triggeredAlerts: readonly TriggeredAlert[];
-  readonly onAddRule: (input: {
-    cityKey: string;
-    cityName: string;
-    metric: "usAqi" | "pm25";
-    threshold: number;
-  }) => void;
   readonly onToggleRule: (ruleId: string) => void;
   readonly onRemoveRule: (ruleId: string) => void;
+}) {
+  const t = useTranslations("alerts");
+
+  return (
+    <div className="mt-5" aria-live="polite">
+      {rules.length === 0 ? (
+        <p className="text-sm text-ink-muted">{t("noRules")}</p>
+      ) : (
+        <ul className="space-y-2">
+          {rules.map((rule) => (
+            <li
+              key={rule.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-borderc bg-surface px-4 py-3 text-sm"
+            >
+              <span className="font-semibold text-ink">
+                {rule.cityName} · {rule.metric === "usAqi" ? t("metricUsAqi") : t("metricPm25")}{" "}
+                &gt; {rule.threshold}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-pressed={rule.enabled}
+                  onClick={() => {
+                    onToggleRule(rule.id);
+                  }}
+                  className="min-h-[44px] rounded-md border border-borderc-strong px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface-muted"
+                >
+                  {rule.enabled ? t("toggleOn") : t("toggleOff")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onRemoveRule(rule.id);
+                  }}
+                  className="min-h-[44px] rounded-md border border-rose-700 px-3 py-1.5 text-xs font-semibold text-rose-900 hover:bg-rose-50 dark:border-rose-400 dark:text-rose-100 dark:hover:bg-rose-950/60"
+                >
+                  {t("deleteRule")}
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -30,7 +71,19 @@ export function ThresholdAlertsSection({
   onAddRule,
   onToggleRule,
   onRemoveRule,
-}: ThresholdAlertsSectionProps) {
+}: {
+  readonly currentCity: CityLocation | null;
+  readonly rules: readonly ThresholdAlertRule[];
+  readonly triggeredAlerts: readonly TriggeredAlert[];
+  readonly onAddRule: (input: {
+    cityKey: string;
+    cityName: string;
+    metric: "usAqi" | "pm25";
+    threshold: number;
+  }) => void;
+  readonly onToggleRule: (ruleId: string) => void;
+  readonly onRemoveRule: (ruleId: string) => void;
+}) {
   const t = useTranslations("alerts");
   const presets = getDemoCityLocations();
   const cityOptions =

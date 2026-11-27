@@ -1,7 +1,7 @@
 import { useTranslations } from "next-intl";
 import { useState, type SyntheticEvent } from "react";
-import type { CityLocation } from "@/domain/types";
 import { ALERT_DEFAULT_THRESHOLD, ALERT_THRESHOLD_MAX, ALERT_THRESHOLD_MIN } from "@/lib/constants";
+import type { CityLocation } from "@/types/air-quality";
 
 interface AlertRuleFormProps {
   readonly cityOptions: readonly CityLocation[];

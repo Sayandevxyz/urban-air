@@ -1,11 +1,11 @@
+import { PLANNER_HOURS_WINDOW, WHO_GUIDELINES_2021_UG_M3 } from "@/lib/constants";
+import type { HourlyForecastPoint } from "@/types/air-quality";
 import type {
   ActivityPlanResult,
   ActivityScorePoint,
   ActivityType,
-  HourlyForecastPoint,
   PersonaId,
-} from "@/domain/types";
-import { PLANNER_HOURS_WINDOW, WHO_GUIDELINES_2021_UG_M3 } from "@/lib/constants";
+} from "@/types/guidance";
 
 const ACTIVITY_INTENSITY_MULTIPLIER: Readonly<Record<ActivityType, number>> = {
   run: 1.35,

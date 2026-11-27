@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
-import { assertAllowedUpstreamUrl, fetchJsonWithGuard } from "@/services/http";
+import { fetchJsonWithGuard } from "@/services/http";
 import { buildSecurityHeaders, generateCspNonce } from "@/services/security-headers";
+import { assertAllowedUpstreamUrl } from "@/services/ssrf-guard";
 
 describe("security: SSRF protection and CSP headers", () => {
   it("allows only HTTPS URLs on explicitly allowlisted hosts", () => {

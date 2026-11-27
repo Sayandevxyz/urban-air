@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { CityLocation } from "@/domain/types";
 import {
   mapOpenMeteoLocations,
   mapOpenMeteoReport,
@@ -7,6 +6,7 @@ import {
   openMeteoGeocodeSchema,
   openMeteoHourlySchema,
 } from "@/services/openMeteoMapper";
+import type { CityLocation } from "@/types/air-quality";
 
 describe("Open-Meteo upstream payload contracts", () => {
   it("validates and maps full and sparse Open-Meteo geocoding payloads", () => {

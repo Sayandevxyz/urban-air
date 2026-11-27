@@ -5,7 +5,7 @@ import type {
   HomeEnergyMode,
   PersonaId,
   ResidentProfile,
-} from "@/domain/types";
+} from "@/types/guidance";
 
 interface PersonaPickerProps {
   readonly profile: ResidentProfile;

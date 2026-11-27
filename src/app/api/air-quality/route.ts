@@ -1,8 +1,9 @@
 import type { NextResponse } from "next/server";
 import { ok } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { getAirQualityProvider, responseFromResult } from "@/services/container";
+import { responseFromResult } from "@/services/container";
 import { getDemoAirQualityReport } from "@/services/demo-data";
+import { openMeteoAirQualityProvider } from "@/services/open-meteo";
 import {
   parseAirQualityParams,
   resolveTargetLocation,
@@ -25,7 +26,7 @@ export const GET = withApiHandler("air-quality", async (request): Promise<NextRe
     lon: location.longitude,
   });
 
-  const result = await getAirQualityProvider().fetchAirQuality(location, request.signal);
+  const result = await openMeteoAirQualityProvider.fetchAirQuality(location, request.signal);
   if (!result.ok) {
     return responseFromResult(result);
   }

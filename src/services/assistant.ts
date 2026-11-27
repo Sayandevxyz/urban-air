@@ -15,17 +15,7 @@ import {
 } from "@/services/assistantSanitize";
 import { fetchJsonWithGuard } from "@/services/http";
 import type { ChatRequestPayload } from "@/services/schemas";
-
-export type { ChatRequestPayload };
-
-export interface AssistantResponsePayload {
-  readonly reply: string;
-  readonly engine: "gemini" | "anthropic" | "fallback";
-  readonly refused: boolean;
-  readonly dataSource: string;
-  readonly updatedAtIso: string;
-  readonly disclaimer: string;
-}
+import type { AssistantResponsePayload } from "@/types/api";
 
 const geminiResponseSchema = z.object({
   candidates: z

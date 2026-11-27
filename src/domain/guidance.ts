@@ -1,15 +1,13 @@
+import type { HourlyForecastPoint, PollutantReadings, SmogAssessment } from "@/types/air-quality";
 import type {
-  HourlyForecastPoint,
   IndoorAirHack,
   MaskAdviceKey,
   OutdoorAdviceKey,
   PersonaGuidance,
   PersonaId,
-  PollutantReadings,
   ResidentProfile,
-  SmogAssessment,
   WindowsAdviceKey,
-} from "@/domain/types";
+} from "@/types/guidance";
 
 const HIGH_SENSITIVITY_PERSONAS = new Set<PersonaId>(["children", "elderly", "asthma", "pregnant"]);
 

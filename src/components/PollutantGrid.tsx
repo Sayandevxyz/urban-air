@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl";
-import type { PollutantAssessment } from "@/domain/types";
+import type { PollutantAssessment } from "@/types/air-quality";
 
 interface PollutantGridProps {
   readonly assessments: readonly PollutantAssessment[];

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AppError, err, ok, toSafeErrorResponse } from "@/lib/errors";
-import { safeJsonParse } from "@/lib/json";
+import { AppError, err, ok, safeJsonParse, toSafeErrorResponse } from "@/lib/errors";
 
 describe("AppError and Result utilities", () => {
   it("wraps success and failure Results cleanly", () => {

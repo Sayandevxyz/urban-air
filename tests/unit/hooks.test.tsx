@@ -1,13 +1,13 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchApiJson } from "@/hooks/apiClient";
-import { fetchAirQuality, readCachedSnapshot } from "@/hooks/fetchAirQuality";
 import { useAirQualityData } from "@/hooks/useAirQualityData";
 import { useChat } from "@/hooks/useChat";
 import { useCityComparison } from "@/hooks/useCityComparison";
 import { useCitySearch } from "@/hooks/useCitySearch";
 import { useLocalAlerts } from "@/hooks/useLocalAlerts";
 import { useRoutineInputs } from "@/hooks/useRoutineInputs";
+import { fetchAirQuality, readCachedSnapshot } from "@/lib/air-quality-client";
+import { fetchApiJson } from "@/lib/api-client";
 import { getDemoAirQualityReport, getDemoCityLocations } from "@/services/demo-data";
 
 describe("custom client hooks", () => {

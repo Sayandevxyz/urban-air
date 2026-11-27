@@ -1,11 +1,11 @@
+import type { PollutantReadings } from "@/types/air-quality";
 import type {
   CommuteMode,
   DirectImpactResult,
   ImpactBreakdownItem,
   ImpactChoiceInput,
-  PollutantReadings,
   ResidentProfile,
-} from "@/domain/types";
+} from "@/types/guidance";
 
 const OUTDOOR_ACTIVE_VENTILATION_M3_PER_HOUR = 1.8;
 const INDOOR_REST_VENTILATION_M3_PER_HOUR = 0.5;

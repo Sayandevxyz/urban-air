@@ -1,7 +1,8 @@
-import type { AirQualityReport, CityLocation } from "@/domain/types";
-import { fetchApiJson, type ApiFetchResult } from "@/hooks/apiClient";
-import { safeJsonParse } from "@/lib/json";
+import { fetchApiJson } from "@/lib/api-client";
+import { safeJsonParse } from "@/lib/errors";
 import { getDemoAirQualityReport } from "@/services/demo-data";
+import type { AirQualityReport, CityLocation } from "@/types/air-quality";
+import type { ApiFetchResult } from "@/types/api";
 
 const SNAPSHOT_STORAGE_KEY = "urban-air:last-snapshot:v1";
 
@@ -9,10 +10,7 @@ interface AirQualityApiResponse {
   readonly report?: AirQualityReport;
 }
 
-/**
- * Builds the query string parameters for /api/air-quality from a CityLocation.
- */
-function buildAirQualityQueryParams(location: CityLocation, demoMode: boolean): URLSearchParams {
+function buildAirQualityQueryParams(location: CityLocation): URLSearchParams {
   const params = new URLSearchParams({
     lat: String(location.latitude),
     lon: String(location.longitude),
@@ -20,7 +18,7 @@ function buildAirQualityQueryParams(location: CityLocation, demoMode: boolean): 
     region: location.region,
     country: location.country,
     timezone: location.timezone,
-    demo: demoMode ? "true" : "false",
+    demo: "false",
   });
   if (!location.key.startsWith("geo-self-") && !location.key.startsWith("loc-")) {
     params.set("cityKey", location.key);
@@ -47,9 +45,6 @@ export function readCachedSnapshot(): AirQualityReport | null {
   }
 }
 
-/**
- * Persists a named city snapshot to localStorage while omitting transient device coordinates.
- */
 function saveCachedSnapshot(report: AirQualityReport): void {
   try {
     if (report.location.key.startsWith("geo-self-")) return;
@@ -70,7 +65,7 @@ export async function fetchAirQuality(
   if (demoMode) {
     return { ok: true, data: getDemoAirQualityReport(location) };
   }
-  const params = buildAirQualityQueryParams(location, false);
+  const params = buildAirQualityQueryParams(location);
   const res = await fetchApiJson<AirQualityApiResponse>(`/api/air-quality?${params.toString()}`, {
     signal,
   });

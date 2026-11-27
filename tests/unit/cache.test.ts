@@ -4,7 +4,7 @@ import { SwrMemoryCache } from "@/services/cache";
 describe("SwrMemoryCache", () => {
   it("returns cached values within TTL and deduplicates concurrent misses", async () => {
     let now = 1_000;
-    const cache = new SwrMemoryCache({ maxEntries: 5, now: () => now });
+    const cache = new SwrMemoryCache<{ value: string }>({ maxEntries: 5, now: () => now });
     const fetcher = vi.fn(async () => {
       await Promise.resolve();
       return { value: "fresh-data" };
@@ -28,7 +28,7 @@ describe("SwrMemoryCache", () => {
   it("serves stale data immediately while revalidating in background", async () => {
     let now = 1_000;
     let version = 1;
-    const cache = new SwrMemoryCache({ maxEntries: 5, now: () => now });
+    const cache = new SwrMemoryCache<string>({ maxEntries: 5, now: () => now });
     const fetcher = vi.fn(async () => {
       await Promise.resolve();
       return `v${version}`;
@@ -56,7 +56,7 @@ describe("SwrMemoryCache", () => {
 
   it("evicts oldest entry at max capacity and skips caching when shouldCache returns false", async () => {
     let now = 1_000;
-    const cache = new SwrMemoryCache({ maxEntries: 2, now: () => now });
+    const cache = new SwrMemoryCache<string>({ maxEntries: 2, now: () => now });
     const policy = { ttlMs: 10_000, staleTtlMs: 20_000 };
 
     await cache.getOrFetch("a", policy, () => Promise.resolve("A"));
@@ -64,9 +64,10 @@ describe("SwrMemoryCache", () => {
     await cache.getOrFetch("c", policy, () => Promise.resolve("C"));
     expect(cache.size()).toBe(2);
 
+    const boolCache = new SwrMemoryCache<{ ok: boolean }>({ maxEntries: 2, now: () => now });
     const errFetcher = vi.fn(() => Promise.resolve({ ok: false }));
-    await cache.getOrFetch("err", policy, errFetcher, (val) => val.ok);
-    await cache.getOrFetch("err", policy, errFetcher, (val) => val.ok);
+    await boolCache.getOrFetch("err", policy, errFetcher, (val) => val.ok);
+    await boolCache.getOrFetch("err", policy, errFetcher, (val) => val.ok);
     expect(errFetcher).toHaveBeenCalledTimes(2);
 
     now += 25_000;

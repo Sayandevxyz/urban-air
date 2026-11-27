@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import type { CityLocation } from "@/domain/types";
 import { COORDINATE_ROUND_FACTOR, GEO_MAX_AGE_MS, GEO_TIMEOUT_MS } from "@/lib/constants";
+import type { CityLocation } from "@/types/air-quality";
 
 export type GeoStatusKey = "none" | "locating" | "locationDenied" | "locationUnavailable";
 

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { assessWinterSmog } from "@/domain/aqi";
 import { calculateDirectImpact } from "@/domain/impact";
 import { buildRoutinesAndAlternatives } from "@/domain/routines";
-import type { PollutantReadings, ResidentProfile } from "@/domain/types";
+import type { PollutantReadings } from "@/types/air-quality";
+import type { ResidentProfile } from "@/types/guidance";
 
 const SMOG_READINGS: PollutantReadings = {
   pm25: 120,

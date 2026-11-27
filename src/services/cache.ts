@@ -1,5 +1,6 @@
 import { MAX_CACHE_ENTRIES } from "@/lib/constants";
 import { logger } from "@/lib/logger";
+import type { CachePolicy } from "@/types/api";
 
 interface CacheRecord<T> {
   readonly value: T;
@@ -8,17 +9,12 @@ interface CacheRecord<T> {
   readonly staleTtlMs: number;
 }
 
-export interface CachePolicy {
-  readonly ttlMs: number;
-  readonly staleTtlMs: number;
-}
-
 /**
  * In-memory bounded cache supporting stale-while-revalidate and in-flight deduplication.
  */
-export class SwrMemoryCache {
-  private readonly entries = new Map<string, CacheRecord<unknown>>();
-  private readonly inFlight = new Map<string, Promise<unknown>>();
+export class SwrMemoryCache<T> {
+  private readonly entries = new Map<string, CacheRecord<T>>();
+  private readonly inFlight = new Map<string, Promise<T>>();
   private readonly maxEntries: number;
   private readonly now: () => number;
 
@@ -33,13 +29,13 @@ export class SwrMemoryCache {
   /**
    * Resolves a key from cache (fresh or stale-while-revalidate) or deduplicates concurrent fetches.
    */
-  public async getOrFetch<T>(
+  public async getOrFetch(
     key: string,
     policy: CachePolicy,
     fetcher: () => Promise<T>,
     shouldCache: (value: T) => boolean = () => true,
   ): Promise<T> {
-    const existing = this.entries.get(key) as CacheRecord<T> | undefined;
+    const existing = this.entries.get(key);
     const currentTime = this.now();
 
     if (existing) {
@@ -72,7 +68,7 @@ export class SwrMemoryCache {
     this.inFlight.clear();
   }
 
-  private setEntry(key: string, value: unknown, policy: CachePolicy): void {
+  private setEntry(key: string, value: T, policy: CachePolicy): void {
     if (this.entries.has(key)) {
       this.entries.delete(key);
     } else if (this.entries.size >= this.maxEntries) {
@@ -90,7 +86,7 @@ export class SwrMemoryCache {
     });
   }
 
-  private triggerBackgroundRevalidate<T>(
+  private triggerBackgroundRevalidate(
     key: string,
     policy: CachePolicy,
     fetcher: () => Promise<T>,
@@ -107,13 +103,13 @@ export class SwrMemoryCache {
     });
   }
 
-  private async runDeduplicatedFetch<T>(
+  private async runDeduplicatedFetch(
     key: string,
     policy: CachePolicy,
     fetcher: () => Promise<T>,
     shouldCache: (value: T) => boolean,
   ): Promise<T> {
-    const pending = this.inFlight.get(key) as Promise<T> | undefined;
+    const pending = this.inFlight.get(key);
     if (pending) {
       return pending;
     }
@@ -133,5 +129,3 @@ export class SwrMemoryCache {
     return promise;
   }
 }
-
-export const sharedServerCache = new SwrMemoryCache();

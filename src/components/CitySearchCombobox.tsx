@@ -1,13 +1,10 @@
-"use client";
-
 import { useTranslations } from "next-intl";
 import type { KeyboardEvent } from "react";
-import { CitySuggestionsList } from "@/components/CitySuggestionsList";
-import { SearchIcon } from "@/components/icons/AqiIcons";
-import type { CityLocation } from "@/domain/types";
-import type { SearchStatus } from "@/hooks/useCitySearch";
+import { SearchIcon } from "@/components/AqiVisuals";
+import type { CityLocation } from "@/types/air-quality";
+import type { SearchStatus } from "@/types/api";
 
-interface SearchComboboxFieldProps {
+interface CitySearchComboboxProps {
   readonly query: string;
   readonly isExpanded: boolean;
   readonly activeOption: CityLocation | undefined;
@@ -20,10 +17,64 @@ interface SearchComboboxFieldProps {
   readonly onChoose: (city: CityLocation) => void;
 }
 
+function SuggestionsListbox({
+  status,
+  results,
+  activeIndex,
+  onChoose,
+}: {
+  readonly status: SearchStatus;
+  readonly results: readonly CityLocation[];
+  readonly activeIndex: number;
+  readonly onChoose: (city: CityLocation) => void;
+}) {
+  const t = useTranslations("search");
+
+  return (
+    <ul
+      id="city-search-listbox"
+      role="listbox"
+      aria-label={t("listboxLabel")}
+      className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border-2 border-borderc-strong bg-surface-elevated p-1 shadow-lg"
+    >
+      {status === "loading" && (
+        <li className="px-3 py-3 text-sm text-ink-muted">{t("searching")}</li>
+      )}
+      {status === "empty" && <li className="px-3 py-3 text-sm text-ink-muted">{t("noResults")}</li>}
+      {results.map((city, index) => {
+        const isSelected = index === activeIndex;
+        return (
+          <li
+            key={city.key}
+            id={`city-option-${city.key}`}
+            role="option"
+            aria-selected={isSelected}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              onChoose(city);
+            }}
+            className={`flex min-h-[44px] cursor-pointer items-center justify-between rounded-md px-3 py-2 text-sm ${
+              isSelected
+                ? "bg-accent font-semibold text-accent-ink"
+                : "text-ink hover:bg-surface-muted"
+            }`}
+          >
+            <span>
+              {city.name}
+              {city.region ? `, ${city.region}` : ""}
+              {city.country ? ` (${city.country})` : ""}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 /**
  * Renders the ARIA APG combobox input and floating city suggestions listbox.
  */
-export function SearchComboboxField({
+export function CitySearchCombobox({
   query,
   isExpanded,
   activeOption,
@@ -34,7 +85,7 @@ export function SearchComboboxField({
   onFocus,
   onKeyDown,
   onChoose,
-}: SearchComboboxFieldProps) {
+}: CitySearchComboboxProps) {
   const t = useTranslations("search");
   return (
     <div className="relative flex-1">
@@ -73,7 +124,7 @@ export function SearchComboboxField({
         />
       </div>
       {isExpanded && (
-        <CitySuggestionsList
+        <SuggestionsListbox
           status={status}
           results={results}
           activeIndex={activeIndex}

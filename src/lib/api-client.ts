@@ -1,5 +1,6 @@
 import { DEFAULT_RETRY_AFTER_SECONDS } from "@/lib/constants";
-import { safeJsonParse } from "@/lib/json";
+import { safeJsonParse } from "@/lib/errors";
+import type { ApiFetchResult, ApiRequestOptions } from "@/types/api";
 
 interface ApiErrorShape {
   readonly error?: {
@@ -7,19 +8,6 @@ interface ApiErrorShape {
     readonly message?: string;
     readonly retryAfterSeconds?: number;
   };
-}
-
-export type ApiFetchResult<T> =
-  | { readonly ok: true; readonly data: T }
-  | { readonly ok: false; readonly kind: "aborted" }
-  | { readonly ok: false; readonly kind: "rate_limited"; readonly retryAfterSeconds: number }
-  | { readonly ok: false; readonly kind: "error"; readonly status: number };
-
-export interface ApiRequestOptions {
-  readonly method?: "GET" | "POST";
-  readonly headers?: Readonly<Record<string, string>>;
-  readonly body?: string;
-  readonly signal?: AbortSignal | undefined;
 }
 
 function extractRetryAfterSeconds(body: unknown): number {

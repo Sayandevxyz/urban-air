@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { scoreActivityWindows } from "@/domain/planner";
-import type { HourlyForecastPoint } from "@/domain/types";
+import type { HourlyForecastPoint } from "@/types/air-quality";
 
 const FORECAST_24H: readonly HourlyForecastPoint[] = [
   {

@@ -7,8 +7,8 @@ import { ActivityPlanner } from "@/components/ActivityPlanner";
 import { GuidanceSection } from "@/components/GuidanceSection";
 import { AppLocaleProvider } from "@/components/LocaleContext";
 import { RoutinesImpactSection } from "@/components/RoutinesImpactSection";
-import type { ResidentProfile } from "@/domain/types";
 import { getDemoAirQualityReport } from "@/services/demo-data";
+import type { ResidentProfile } from "@/types/guidance";
 
 function GuidanceHarness() {
   const [profile, setProfile] = useState<ResidentProfile>({

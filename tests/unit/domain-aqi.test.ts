@@ -12,7 +12,7 @@ import {
   computeCompositeUsAqi,
   estimateEuropeanAqiFromPollutants,
 } from "@/domain/aqiBreakpoints";
-import type { PollutantReadings } from "@/domain/types";
+import type { PollutantReadings } from "@/types/air-quality";
 
 const CLEAN_READINGS: PollutantReadings = {
   pm25: 6,

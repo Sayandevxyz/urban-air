@@ -1,13 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AirQualityReport, CityLocation } from "@/domain/types";
-import { fetchAirQuality, readCachedSnapshot } from "@/hooks/fetchAirQuality";
 import { useAsyncResource } from "@/hooks/useAsyncResource";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { fetchAirQuality, readCachedSnapshot } from "@/lib/air-quality-client";
 import { getDemoAirQualityReport, getDemoCityLocations } from "@/services/demo-data";
-
-export type LoadState = "loading" | "ready" | "empty" | "error" | "offline" | "rate_limited";
+import type { AirQualityReport, CityLocation } from "@/types/air-quality";
+import type { LoadState } from "@/types/api";
 
 interface LoadOutcome {
   readonly loadState: LoadState;

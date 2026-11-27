@@ -2,12 +2,13 @@
 
 import { useTranslations } from "next-intl";
 import { useState, type KeyboardEvent } from "react";
-import { LocationPinIcon } from "@/components/icons/AqiIcons";
-import { SearchComboboxField } from "@/components/SearchComboboxField";
-import type { CityLocation } from "@/domain/types";
-import { useCitySearch, type SearchStatus } from "@/hooks/useCitySearch";
+import { LocationPinIcon } from "@/components/AqiVisuals";
+import { CitySearchCombobox } from "@/components/CitySearchCombobox";
+import { useCitySearch } from "@/hooks/useCitySearch";
 import type { GeoStatusKey } from "@/hooks/useGeolocation";
 import { getDemoCityLocations } from "@/services/demo-data";
+import type { CityLocation } from "@/types/air-quality";
+import type { SearchStatus } from "@/types/api";
 
 interface CitySearchBarProps {
   readonly demoMode: boolean;
@@ -140,7 +141,7 @@ export function CitySearchBar({
       </h2>
       <div role="search" className="mt-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <SearchComboboxField
+          <CitySearchCombobox
             query={query}
             isExpanded={isExpanded}
             activeOption={activeOption}

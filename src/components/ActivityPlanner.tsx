@@ -3,7 +3,8 @@
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { scoreActivityWindows } from "@/domain/planner";
-import type { ActivityScorePoint, ActivityType, AirQualityReport, PersonaId } from "@/domain/types";
+import type { AirQualityReport } from "@/types/air-quality";
+import type { ActivityScorePoint, ActivityType, PersonaId } from "@/types/guidance";
 
 interface ActivityPlannerProps {
   readonly report: AirQualityReport;

@@ -1,4 +1,5 @@
 import { calculatePollutantUsAqi, POLLUTANT_KEYS } from "@/domain/aqiBreakpoints";
+import { WHO_GUIDELINES_2021_UG_M3, WINTER_SMOG_THRESHOLDS } from "@/lib/constants";
 import type {
   EuropeanAqiBand,
   PollutantAssessment,
@@ -6,8 +7,7 @@ import type {
   PollutantReadings,
   SmogAssessment,
   UsAqiClassification,
-} from "@/domain/types";
-import { WHO_GUIDELINES_2021_UG_M3, WINTER_SMOG_THRESHOLDS } from "@/lib/constants";
+} from "@/types/air-quality";
 
 const ELEVATED_SMOG_US_AQI = 101;
 const ELEVATED_SMOG_PM25 = 35.5;

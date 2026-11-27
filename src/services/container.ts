@@ -3,13 +3,10 @@ import { DAILY_LLM_WINDOW_MS } from "@/lib/constants";
 import { getEnv } from "@/lib/env";
 import { AppError, toSafeErrorResponse, type Result } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { OpenMeteoAirQualityProvider, OpenMeteoGeocodingProvider } from "@/services/open-meteo";
 import { InMemoryTokenBucketRateLimiter, type RateLimiter } from "@/services/rate-limit";
 
 let rateLimiterSingleton: InMemoryTokenBucketRateLimiter | undefined;
 let dailyLlmLimiterSingleton: InMemoryTokenBucketRateLimiter | undefined;
-let geocodingProviderSingleton: OpenMeteoGeocodingProvider | undefined;
-let airQualityProviderSingleton: OpenMeteoAirQualityProvider | undefined;
 
 /**
  * Returns the shared server rate limiter configured from validated environment variables.
@@ -47,26 +44,6 @@ export function resetRateLimiter(): void {
   rateLimiterSingleton = undefined;
   dailyLlmLimiterSingleton?.reset();
   dailyLlmLimiterSingleton = undefined;
-}
-
-/**
- * Returns the active GeocodingProvider implementation.
- */
-export function getGeocodingProvider(): OpenMeteoGeocodingProvider {
-  if (!geocodingProviderSingleton) {
-    geocodingProviderSingleton = new OpenMeteoGeocodingProvider();
-  }
-  return geocodingProviderSingleton;
-}
-
-/**
- * Returns the active AirQualityProvider implementation.
- */
-export function getAirQualityProvider(): OpenMeteoAirQualityProvider {
-  if (!airQualityProviderSingleton) {
-    airQualityProviderSingleton = new OpenMeteoAirQualityProvider();
-  }
-  return airQualityProviderSingleton;
 }
 
 /**

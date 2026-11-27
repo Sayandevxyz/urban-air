@@ -10,7 +10,7 @@ import {
   computeChartY,
   computeHourlyX,
 } from "@/domain/forecastChartGeometry";
-import type { DailyTrendPoint, HourlyForecastPoint } from "@/domain/types";
+import type { DailyTrendPoint, HourlyForecastPoint } from "@/types/air-quality";
 
 describe("domain/forecastChartGeometry", () => {
   it("computes single-point and multi-point hourly SVG geometry accurately", () => {

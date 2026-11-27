@@ -1,12 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { assessWinterSmog } from "@/domain/aqi";
 import { buildIndoorAirHacks, buildPersonaGuidance } from "@/domain/guidance";
-import type {
-  HourlyForecastPoint,
-  PersonaId,
-  PollutantReadings,
-  ResidentProfile,
-} from "@/domain/types";
+import type { HourlyForecastPoint, PollutantReadings } from "@/types/air-quality";
+import type { PersonaId, ResidentProfile } from "@/types/guidance";
 
 const BASE_PROFILE: ResidentProfile = {
   persona: "general",

@@ -5,8 +5,9 @@ import { POLLUTANT_KEYS, calculatePollutantUsAqi } from "@/domain/aqiBreakpoints
 import { buildDailyGeometry, buildHourlyGeometry } from "@/domain/forecastChartGeometry";
 import { calculateDirectImpact } from "@/domain/impact";
 import { scoreActivityWindows } from "@/domain/planner";
-import type { HourlyForecastPoint, ResidentProfile } from "@/domain/types";
-import { safeJsonParse } from "@/lib/json";
+import { safeJsonParse } from "@/lib/errors";
+import type { HourlyForecastPoint } from "@/types/air-quality";
+import type { ResidentProfile } from "@/types/guidance";
 
 const DEFAULT_PROFILE: ResidentProfile = {
   persona: "general",
