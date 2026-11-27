@@ -6,8 +6,7 @@ import { useCityComparison } from "@/hooks/useCityComparison";
 import { useCitySearch } from "@/hooks/useCitySearch";
 import { useLocalAlerts } from "@/hooks/useLocalAlerts";
 import { useRoutineInputs } from "@/hooks/useRoutineInputs";
-import { fetchAirQuality, readCachedSnapshot } from "@/lib/air-quality-client";
-import { fetchApiJson } from "@/lib/api-client";
+import { fetchAirQuality, fetchApiJson, readCachedSnapshot } from "@/lib/api-client";
 import { getDemoAirQualityReport, getDemoCityLocations } from "@/services/demo-data";
 
 describe("custom client hooks", () => {

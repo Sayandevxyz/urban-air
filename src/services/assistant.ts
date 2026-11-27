@@ -2,8 +2,11 @@ import { z } from "zod";
 import { LLM_TIMEOUT_MS, MAX_LLM_OUTPUT_TOKENS } from "@/lib/constants";
 import { getEnv, type ValidatedEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
-import { generateGroundedFallbackReply } from "@/services/assistantFallback";
-import { buildSystemInstruction, buildUserEnvelope } from "@/services/assistantPrompt";
+import {
+  buildSystemInstruction,
+  buildUserEnvelope,
+  generateGroundedFallbackReply,
+} from "@/services/assistant-responses";
 import {
   detectPromptInjection,
   DISCLAIMERS,

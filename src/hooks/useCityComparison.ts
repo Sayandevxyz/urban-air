@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchAirQuality } from "@/lib/air-quality-client";
+import { fetchAirQuality } from "@/lib/api-client";
 import { MAX_COMPARE_CITIES } from "@/lib/constants";
 import { getDemoAirQualityReport, getDemoCityLocations } from "@/services/demo-data";
 import type { AirQualityReport, CityLocation } from "@/types/air-quality";

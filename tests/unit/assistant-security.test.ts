@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resetEnvCache } from "@/lib/env";
 import { parseEnv } from "@/lib/env";
 import { answerAirQualityQuestion } from "@/services/assistant";
-import { generateGroundedFallbackReply } from "@/services/assistantFallback";
+import { generateGroundedFallbackReply } from "@/services/assistant-responses";
 import {
   detectPromptInjection,
   sanitizeAssistantOutput,

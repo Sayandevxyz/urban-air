@@ -1,15 +1,78 @@
 import { FORECAST_HOURS_WINDOW, TREND_DAYS_WINDOW } from "@/lib/constants";
-import {
-  DEMO_CITY_SEEDS,
-  DEMO_REFERENCE_START_ISO,
-  type DemoCitySeed,
-} from "@/services/demo-seeds";
 import type {
   AirQualityReport,
   CityLocation,
   DailyTrendPoint,
   HourlyForecastPoint,
+  PollutantReadings,
 } from "@/types/air-quality";
+
+interface DemoCitySeed {
+  readonly location: CityLocation;
+  readonly baseReadings: PollutantReadings;
+  readonly baseUsAqi: number;
+  readonly baseEuropeanAqi: number;
+  readonly diurnalAmplitude: number;
+}
+
+const DEMO_REFERENCE_START_ISO = "2026-11-26T00:00:00Z";
+
+function createSeed(
+  loc: readonly [string, string, string, string, number, number, string],
+  pol: readonly [number, number, number, number, number, number],
+  aqi: readonly [number, number, number],
+): DemoCitySeed {
+  return {
+    location: {
+      key: loc[0],
+      name: loc[1],
+      region: loc[2],
+      country: loc[3],
+      latitude: loc[4],
+      longitude: loc[5],
+      timezone: loc[6],
+    },
+    baseReadings: {
+      pm25: pol[0],
+      pm10: pol[1],
+      no2: pol[2],
+      o3: pol[3],
+      so2: pol[4],
+      co: pol[5],
+    },
+    baseUsAqi: aqi[0],
+    baseEuropeanAqi: aqi[1],
+    diurnalAmplitude: aqi[2],
+  };
+}
+
+const DEMO_CITY_SEEDS: readonly DemoCitySeed[] = [
+  createSeed(
+    ["delhi", "Delhi", "Delhi", "India", 28.61, 77.21, "Asia/Kolkata"],
+    [158, 278, 92, 38, 24, 2450],
+    [224, 108, 0.34],
+  ),
+  createSeed(
+    ["coimbatore", "Coimbatore", "Tamil Nadu", "India", 11.02, 76.96, "Asia/Kolkata"],
+    [8.2, 22, 14, 44, 6, 290],
+    [46, 24, 0.16],
+  ),
+  createSeed(
+    ["mumbai", "Mumbai", "Maharashtra", "India", 19.08, 72.88, "Asia/Kolkata"],
+    [32, 76, 48, 56, 15, 840],
+    [94, 49, 0.22],
+  ),
+  createSeed(
+    ["london", "London", "Greater London", "United Kingdom", 51.51, -0.13, "Europe/London"],
+    [16.5, 34, 44, 52, 7, 410],
+    [65, 36, 0.2],
+  ),
+  createSeed(
+    ["beijing", "Beijing", "Beijing", "China", 39.9, 116.41, "Asia/Shanghai"],
+    [94, 172, 78, 34, 21, 1850],
+    [174, 89, 0.3],
+  ),
+];
 
 function buildDiurnalFactor(hourOfDay: number, amplitude: number): number {
   const afternoonCleanerWave = Math.cos(((hourOfDay - 15) / 24) * Math.PI * 2);
@@ -77,15 +140,32 @@ export function getDemoCityLocations(): readonly CityLocation[] {
  */
 export function searchDemoCities(query: string): readonly CityLocation[] {
   const normalized = query.trim().toLowerCase();
-  if (!normalized) {
-    return getDemoCityLocations();
-  }
+  if (!normalized) return getDemoCityLocations();
   return DEMO_CITY_SEEDS.filter(
     (seed) =>
       seed.location.name.toLowerCase().includes(normalized) ||
       seed.location.country.toLowerCase().includes(normalized) ||
       seed.location.region.toLowerCase().includes(normalized),
   ).map((seed) => seed.location);
+}
+
+function findClosestDemoSeed(cityKeyOrLocation: string | CityLocation): DemoCitySeed {
+  const fallbackSeed = DEMO_CITY_SEEDS[0];
+  if (!fallbackSeed) throw new Error("DEMO_CITY_SEEDS must contain at least one city.");
+  if (typeof cityKeyOrLocation === "string") return fallbackSeed;
+
+  let bestSeed: DemoCitySeed = fallbackSeed;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (const seed of DEMO_CITY_SEEDS) {
+    const dLat = seed.location.latitude - cityKeyOrLocation.latitude;
+    const dLon = seed.location.longitude - cityKeyOrLocation.longitude;
+    const dist = dLat * dLat + dLon * dLon;
+    if (dist < bestDistance) {
+      bestDistance = dist;
+      bestSeed = seed;
+    }
+  }
+  return bestSeed;
 }
 
 /**
@@ -102,7 +182,6 @@ export function getDemoAirQualityReport(
   const matchedSeed =
     DEMO_CITY_SEEDS.find((seed) => seed.location.key === targetKey) ??
     findClosestDemoSeed(cityKeyOrLocation);
-
   const location = typeof cityKeyOrLocation === "string" ? matchedSeed.location : cityKeyOrLocation;
 
   return {
@@ -117,29 +196,4 @@ export function getDemoAirQualityReport(
     hourly: generateHourlySeries(matchedSeed),
     daily: generateDailySeries(matchedSeed),
   };
-}
-
-function findClosestDemoSeed(cityKeyOrLocation: string | CityLocation): DemoCitySeed {
-  const fallbackSeed = DEMO_CITY_SEEDS[0];
-  if (!fallbackSeed) {
-    throw new Error("DEMO_CITY_SEEDS must contain at least one city.");
-  }
-  if (typeof cityKeyOrLocation === "string") {
-    return fallbackSeed;
-  }
-
-  let bestSeed: DemoCitySeed = fallbackSeed;
-  let bestDistance = Number.POSITIVE_INFINITY;
-
-  for (const seed of DEMO_CITY_SEEDS) {
-    const dLat = seed.location.latitude - cityKeyOrLocation.latitude;
-    const dLon = seed.location.longitude - cityKeyOrLocation.longitude;
-    const dist = dLat * dLat + dLon * dLon;
-    if (dist < bestDistance) {
-      bestDistance = dist;
-      bestSeed = seed;
-    }
-  }
-
-  return bestSeed;
 }

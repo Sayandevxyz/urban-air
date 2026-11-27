@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAsyncResource } from "@/hooks/useAsyncResource";
 import { useGeolocation } from "@/hooks/useGeolocation";
-import { fetchAirQuality, readCachedSnapshot } from "@/lib/air-quality-client";
+import { fetchAirQuality, readCachedSnapshot } from "@/lib/api-client";
 import { getDemoAirQualityReport, getDemoCityLocations } from "@/services/demo-data";
 import type { AirQualityReport, CityLocation } from "@/types/air-quality";
 import type { LoadState } from "@/types/api";
