@@ -1,6 +1,21 @@
+// ============================================================================
+// src/lib/env.ts
+// Validates startup server environment variables with Zod and SSRF allowlists.
+// ============================================================================
+
 import { z } from "zod";
-import { ALLOWED_UPSTREAM_HOSTS, DAILY_LLM_MAX_REQUESTS } from "@/lib/constants";
+import { ALLOWED_UPSTREAM_HOSTS, DAILY_LLM_MAX_REQUESTS, HTTP_STATUS } from "@/lib/constants";
 import { AppError } from "@/lib/errors";
+
+const API_KEY_MIN_LENGTH = 10;
+const API_KEY_MAX_LENGTH = 256;
+const MODEL_NAME_MIN_LENGTH = 3;
+const MODEL_NAME_MAX_LENGTH = 80;
+const MAX_RATE_REQUESTS = 10_000;
+const DEFAULT_RATE_REQUESTS = 60;
+const MIN_RATE_WINDOW_MS = 1_000;
+const MAX_RATE_WINDOW_MS = 3_600_000;
+const DEFAULT_RATE_WINDOW_MS = 60_000;
 
 function isAllowlistedHttpsUrl(value: string): boolean {
   try {
@@ -27,25 +42,43 @@ const envSchema = z.object({
     })
     .default("https://geocoding-api.open-meteo.com/v1"),
   LLM_PROVIDER: z.enum(["auto", "gemini", "anthropic", "fallback"]).default("auto"),
-  GEMINI_API_KEY: z.string().trim().min(10).max(256).optional(),
-  GEMINI_MODEL: z.string().trim().min(3).max(80).default("gemini-2.5-flash"),
-  ANTHROPIC_API_KEY: z.string().trim().min(10).max(256).optional(),
-  ANTHROPIC_MODEL: z.string().trim().min(3).max(80).default("claude-3-5-haiku-latest"),
-  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().min(1).max(10_000).default(60),
-  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(1_000).max(3_600_000).default(60_000),
+  GEMINI_API_KEY: z.string().trim().min(API_KEY_MIN_LENGTH).max(API_KEY_MAX_LENGTH).optional(),
+  GEMINI_MODEL: z
+    .string()
+    .trim()
+    .min(MODEL_NAME_MIN_LENGTH)
+    .max(MODEL_NAME_MAX_LENGTH)
+    .default("gemini-2.5-flash"),
+  ANTHROPIC_API_KEY: z.string().trim().min(API_KEY_MIN_LENGTH).max(API_KEY_MAX_LENGTH).optional(),
+  ANTHROPIC_MODEL: z
+    .string()
+    .trim()
+    .min(MODEL_NAME_MIN_LENGTH)
+    .max(MODEL_NAME_MAX_LENGTH)
+    .default("claude-3-5-haiku-latest"),
+  RATE_LIMIT_MAX_REQUESTS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_RATE_REQUESTS)
+    .default(DEFAULT_RATE_REQUESTS),
+  RATE_LIMIT_WINDOW_MS: z.coerce
+    .number()
+    .int()
+    .min(MIN_RATE_WINDOW_MS)
+    .max(MAX_RATE_WINDOW_MS)
+    .default(DEFAULT_RATE_WINDOW_MS),
   DAILY_LLM_MAX_REQUESTS: z.coerce
     .number()
     .int()
     .min(1)
-    .max(10_000)
+    .max(MAX_RATE_REQUESTS)
     .default(DAILY_LLM_MAX_REQUESTS),
   TRUST_PROXY: z.enum(["true", "false"]).default("false"),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error", "silent"]).default("info"),
 });
 
-/**
- * Validated runtime environment configuration.
- */
+/** Validated runtime environment configuration. */
 export type ValidatedEnv = z.infer<typeof envSchema>;
 
 function emptyStringsToUndefined(
@@ -57,7 +90,7 @@ function emptyStringsToUndefined(
       throw new AppError(
         "CONFIG_ERROR",
         `Forbidden secret exposure detected in client-exposed variable: ${key}`,
-        500,
+        HTTP_STATUS.INTERNAL_ERROR,
       );
     }
     normalized[key] = value === "" ? undefined : value;
@@ -65,9 +98,7 @@ function emptyStringsToUndefined(
   return normalized;
 }
 
-/**
- * Parses and validates environment variables once, failing fast with an actionable AppError.
- */
+/** Parses and validates environment variables once, failing fast with an AppError. */
 export function parseEnv(rawEnv: Record<string, string | undefined>): ValidatedEnv {
   const normalized = emptyStringsToUndefined(rawEnv);
   const parsed = envSchema.safeParse(normalized);
@@ -75,16 +106,18 @@ export function parseEnv(rawEnv: Record<string, string | undefined>): ValidatedE
     const issueSummary = parsed.error.issues
       .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
       .join("; ");
-    throw new AppError("CONFIG_ERROR", `Invalid environment configuration: ${issueSummary}`, 500);
+    throw new AppError(
+      "CONFIG_ERROR",
+      `Invalid environment configuration: ${issueSummary}`,
+      HTTP_STATUS.INTERNAL_ERROR,
+    );
   }
   return parsed.data;
 }
 
 let cachedEnv: ValidatedEnv | undefined;
 
-/**
- * Returns memoized validated server environment configuration.
- */
+/** Returns memoized validated server environment configuration. */
 export function getEnv(): ValidatedEnv {
   if (!cachedEnv) {
     cachedEnv = parseEnv(process.env);
@@ -92,9 +125,7 @@ export function getEnv(): ValidatedEnv {
   return cachedEnv;
 }
 
-/**
- * Clears the cached environment object (intended exclusively for deterministic tests).
- */
+/** Clears the cached environment object (intended exclusively for deterministic tests). */
 export function resetEnvCache(): void {
   cachedEnv = undefined;
 }

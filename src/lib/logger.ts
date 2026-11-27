@@ -1,10 +1,13 @@
-import { COORDINATE_LOG_DECIMALS } from "@/lib/constants";
+// ============================================================================
+// src/lib/logger.ts
+// Provides structured JSON logging with automatic secret and coord redaction.
+// ============================================================================
 
-/**
- * Supported structured logger severity levels.
- */
+import { COORDINATE_LOG_DECIMALS, DECIMAL_RADIX } from "@/lib/constants";
+
 type LogLevel = "debug" | "info" | "warn" | "error" | "silent";
 
+const MAX_LOG_STRING_LENGTH = 300;
 const LOG_PRIORITY: Record<LogLevel, number> = {
   debug: 10,
   info: 20,
@@ -16,17 +19,13 @@ const LOG_PRIORITY: Record<LogLevel, number> = {
 const SENSITIVE_KEY_PATTERN = /key|token|secret|password|authorization|cookie/i;
 const COORDINATE_KEY_PATTERN = /^(lat|lon|latitude|longitude)$/i;
 
-/**
- * Rounds coordinates to two decimal places (~1.1 km precision) to protect resident privacy in logs.
- */
+/** Rounds coordinates to two decimal places (~1.1 km) to protect privacy in logs. */
 export function redactCoordinate(value: number): number {
-  const factor = 10 ** COORDINATE_LOG_DECIMALS;
+  const factor = DECIMAL_RADIX ** COORDINATE_LOG_DECIMALS;
   return Math.round(value * factor) / factor;
 }
 
-/**
- * Sanitizes log metadata objects by masking secrets and truncating geographic coordinates.
- */
+/** Sanitizes log metadata by masking secret keys and truncating geographic coordinates. */
 export function sanitizeLogContext(
   context: Record<string, unknown> | undefined,
 ): Record<string, unknown> | undefined {
@@ -50,8 +49,8 @@ export function sanitizeLogContext(
       continue;
     }
 
-    if (typeof rawValue === "string" && rawValue.length > 300) {
-      sanitized[key] = `${rawValue.slice(0, 300)}...[truncated]`;
+    if (typeof rawValue === "string" && rawValue.length > MAX_LOG_STRING_LENGTH) {
+      sanitized[key] = `${rawValue.slice(0, MAX_LOG_STRING_LENGTH)}...[truncated]`;
       continue;
     }
 
@@ -97,9 +96,7 @@ function writeLog(
   }
 }
 
-/**
- * Application structured logger replacing console.log across server and service modules.
- */
+/** Structured server logger replacing console.log across routes and service adapters. */
 export const logger = {
   debug(message: string, context?: Record<string, unknown>): void {
     writeLog("debug", message, context);

@@ -22,11 +22,10 @@ export default defineConfig({
       include: ["src/**/*.{ts,tsx}"],
       exclude: [
         "src/**/*.d.ts",
-        "src/domain/types.ts",
-        "src/services/providers.ts",
+        "src/types/*.ts",
         "src/app/layout.tsx",
         "src/app/**/loading.tsx",
-        "src/i18n/messages/*.json",
+        "src/i18n/*.json",
       ],
       thresholds: {
         lines: 97,

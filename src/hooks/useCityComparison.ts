@@ -1,10 +1,15 @@
+// ============================================================================
+// src/hooks/useCityComparison.ts
+// Manages parallel report fetching for up to three compared cities.
+// ============================================================================
+
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AirQualityReport, CityLocation } from "@/domain/types";
-import { fetchAirQuality } from "@/hooks/fetchAirQuality";
+import { fetchAirQuality } from "@/lib/api-client";
 import { MAX_COMPARE_CITIES } from "@/lib/constants";
 import { getDemoAirQualityReport, getDemoCityLocations } from "@/services/demo-data";
+import type { AirQualityReport, CityLocation } from "@/types/air-quality";
 
 function buildDemoReportMap(
   targetCities: readonly CityLocation[],

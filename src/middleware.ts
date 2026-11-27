@@ -1,5 +1,10 @@
+// ============================================================================
+// src/middleware.ts
+// Issues per-request cryptographic CSP nonces and hardens response headers.
+// ============================================================================
+
 import { NextResponse, type NextRequest } from "next/server";
-import { buildSecurityHeaders, generateCspNonce } from "@/services/security-headers";
+import { buildSecurityHeaders, generateCspNonce } from "@/services/security";
 
 /**
  * Attaches a per-request CSP nonce via internal request headers and strict security headers on responses.
@@ -28,6 +33,7 @@ export function middleware(request: NextRequest): NextResponse {
   return response;
 }
 
+/** Next.js matcher excluding static build assets from CSP header injection. */
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

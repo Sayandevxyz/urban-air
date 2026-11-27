@@ -1,3 +1,8 @@
+// ============================================================================
+// src/hooks/useAsyncResource.ts
+// Provides AbortController cleanup across async fetches and unmounts.
+// ============================================================================
+
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";

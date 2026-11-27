@@ -1,4 +1,8 @@
-import type { AirQualityReport, CityLocation } from "@/domain/types";
+// ============================================================================
+// src/services/open-meteo.ts
+// Implements SWR-cached Open-Meteo geocoding and parallel AQI providers.
+// ============================================================================
+
 import {
   AQI_CACHE_STALE_TTL_MS,
   AQI_CACHE_TTL_MS,
@@ -8,7 +12,7 @@ import {
 } from "@/lib/constants";
 import { getEnv } from "@/lib/env";
 import { err, ok, type Result } from "@/lib/errors";
-import { sharedServerCache, type SwrMemoryCache } from "@/services/cache";
+import { SwrMemoryCache } from "@/services/cache";
 import { fetchJsonWithGuard } from "@/services/http";
 import {
   mapOpenMeteoLocations,
@@ -17,8 +21,12 @@ import {
   openMeteoGeocodeSchema,
   openMeteoHourlySchema,
   roundCoord,
-} from "@/services/openMeteoMapper";
-import type { AirQualityProvider, GeocodingProvider } from "@/services/providers";
+} from "@/services/open-meteo-mapper";
+import type { AirQualityReport, CityLocation } from "@/types/air-quality";
+import type { AirQualityProvider, GeocodingProvider } from "@/types/api";
+
+const geocodeCache = new SwrMemoryCache<Result<readonly CityLocation[]>>();
+const airQualityCache = new SwrMemoryCache<Result<AirQualityReport>>();
 
 function buildGeocodeUrl(baseUrl: string, query: string): string {
   const url = new URL(`${baseUrl}/search`);
@@ -29,92 +37,72 @@ function buildGeocodeUrl(baseUrl: string, query: string): string {
   return url.toString();
 }
 
-function buildCurrentUrl(baseUrl: string, lat: number, lon: number): string {
+function buildAirQualityUrl(
+  baseUrl: string,
+  lat: number,
+  lon: number,
+  params: Readonly<Record<string, string>>,
+): string {
   const url = new URL(`${baseUrl}/air-quality`);
   url.searchParams.set("latitude", String(lat));
   url.searchParams.set("longitude", String(lon));
-  url.searchParams.set(
-    "current",
-    "us_aqi,european_aqi,pm2_5,pm10,nitrogen_dioxide,ozone,sulphur_dioxide,carbon_monoxide",
-  );
-  url.searchParams.set("timezone", "auto");
-  return url.toString();
-}
-
-function buildForecastUrl(baseUrl: string, lat: number, lon: number): string {
-  const url = new URL(`${baseUrl}/air-quality`);
-  url.searchParams.set("latitude", String(lat));
-  url.searchParams.set("longitude", String(lon));
-  url.searchParams.set("hourly", "us_aqi,european_aqi,pm2_5,pm10,nitrogen_dioxide,ozone");
-  url.searchParams.set("forecast_days", String(TREND_DAYS_WINDOW));
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
   url.searchParams.set("timezone", "auto");
   return url.toString();
 }
 
 /**
- * Geocoding provider backed by Open-Meteo Geocoding API with 24-hour SWR caching.
+ * Default Open-Meteo geocoding adapter backed by 24-hour SWR caching and deduplication.
  */
-export class OpenMeteoGeocodingProvider implements GeocodingProvider {
-  public readonly providerName = "open-meteo-geocoding";
-  private readonly cache: SwrMemoryCache;
-
-  public constructor(cache: SwrMemoryCache = sharedServerCache) {
-    this.cache = cache;
-  }
-
-  /**
-   * Searches urban locations matching the query string with caching and deduplication.
-   */
-  public async searchCities(
-    query: string,
-    signal?: AbortSignal,
-  ): Promise<Result<readonly CityLocation[]>> {
+export const openMeteoGeocodingProvider: GeocodingProvider = {
+  providerName: "open-meteo-geocoding",
+  searchCities(query: string, signal?: AbortSignal): Promise<Result<readonly CityLocation[]>> {
     const cacheKey = `geo:${query.trim().toLowerCase()}`;
-    return this.cache.getOrFetch(
+    return geocodeCache.getOrFetch(
       cacheKey,
       { ttlMs: GEOCODING_CACHE_TTL_MS, staleTtlMs: GEOCODING_CACHE_STALE_TTL_MS },
       async () => {
-        const env = getEnv();
-        const url = buildGeocodeUrl(env.OPEN_METEO_GEOCODING_BASE_URL, query);
+        const url = buildGeocodeUrl(getEnv().OPEN_METEO_GEOCODING_BASE_URL, query);
         const result = await fetchJsonWithGuard(url, openMeteoGeocodeSchema, { signal });
-        if (!result.ok) {
-          return result;
-        }
-        return ok(mapOpenMeteoLocations(result.value));
+        return result.ok ? ok(mapOpenMeteoLocations(result.value)) : result;
       },
       (res) => res.ok,
     );
-  }
-}
+  },
+};
 
 /**
- * Air quality provider backed by Open-Meteo Air Quality API using parallel fetches and 10-min cache.
+ * Default Open-Meteo air quality adapter fetching current readings and 7-day forecasts in parallel.
  */
-export class OpenMeteoAirQualityProvider implements AirQualityProvider {
-  public readonly providerName = "open-meteo-air-quality";
-  private readonly cache: SwrMemoryCache;
-
-  public constructor(cache: SwrMemoryCache = sharedServerCache) {
-    this.cache = cache;
-  }
-
-  /**
-   * Fetches current pollutant snapshot and 7-day hourly forecast in parallel (zero waterfall).
-   */
-  public async fetchAirQuality(
-    location: CityLocation,
-    signal?: AbortSignal,
-  ): Promise<Result<AirQualityReport>> {
+export const openMeteoAirQualityProvider: AirQualityProvider = {
+  providerName: "open-meteo-air-quality",
+  fetchAirQuality(location: CityLocation, signal?: AbortSignal): Promise<Result<AirQualityReport>> {
     const lat = roundCoord(location.latitude);
     const lon = roundCoord(location.longitude);
-    return this.cache.getOrFetch(
+    return airQualityCache.getOrFetch(
       `aqi:${lat}:${lon}`,
       { ttlMs: AQI_CACHE_TTL_MS, staleTtlMs: AQI_CACHE_STALE_TTL_MS },
       async () => {
         const base = getEnv().OPEN_METEO_AIR_QUALITY_BASE_URL;
         const [currentRes, forecastRes] = await Promise.all([
-          fetchJsonWithGuard(buildCurrentUrl(base, lat, lon), openMeteoCurrentSchema, { signal }),
-          fetchJsonWithGuard(buildForecastUrl(base, lat, lon), openMeteoHourlySchema, { signal }),
+          fetchJsonWithGuard(
+            buildAirQualityUrl(base, lat, lon, {
+              current:
+                "us_aqi,european_aqi,pm2_5,pm10,nitrogen_dioxide,ozone,sulphur_dioxide,carbon_monoxide",
+            }),
+            openMeteoCurrentSchema,
+            { signal },
+          ),
+          fetchJsonWithGuard(
+            buildAirQualityUrl(base, lat, lon, {
+              hourly: "us_aqi,european_aqi,pm2_5,pm10,nitrogen_dioxide,ozone",
+              forecast_days: String(TREND_DAYS_WINDOW),
+            }),
+            openMeteoHourlySchema,
+            { signal },
+          ),
         ]);
         if (!currentRes.ok) return err(currentRes.error);
         if (!forecastRes.ok) return err(forecastRes.error);
@@ -122,5 +110,13 @@ export class OpenMeteoAirQualityProvider implements AirQualityProvider {
       },
       (res) => res.ok,
     );
-  }
+  },
+};
+
+/**
+ * Clears cached Open-Meteo geocoding and air quality entries (used by integration tests).
+ */
+export function clearOpenMeteoCaches(): void {
+  geocodeCache.clear();
+  airQualityCache.clear();
 }

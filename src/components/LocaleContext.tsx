@@ -1,9 +1,38 @@
+// ============================================================================
+// src/components/LocaleContext.tsx
+// Provides lazy-loaded runtime i18n catalogs (en/hi/ta) and <html lang> sync.
+// ============================================================================
+
 "use client";
 
 import { NextIntlClientProvider } from "next-intl";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { enMessages, loadLocaleMessages, type LocaleMessages } from "@/i18n/catalog";
+import enMessages from "@/i18n/en.json";
 import { SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/constants";
+
+/**
+ * Strongly typed translation catalog structure derived from the canonical English dictionary.
+ */
+export type LocaleMessages = typeof enMessages;
+
+/**
+ * Loads the translation catalog for the requested locale on demand to keep initial JS minimal.
+ */
+export async function loadLocaleMessages(locale: SupportedLocale): Promise<LocaleMessages> {
+  switch (locale) {
+    case "hi": {
+      const mod = await import("@/i18n/hi.json");
+      return mod.default;
+    }
+    case "ta": {
+      const mod = await import("@/i18n/ta.json");
+      return mod.default;
+    }
+    case "en":
+    default:
+      return enMessages;
+  }
+}
 
 interface LocaleContextValue {
   readonly locale: SupportedLocale;
@@ -34,6 +63,7 @@ export function AppLocaleProvider({
   readonly initialMessages?: LocaleMessages;
 }) {
   const [locale, setLocaleState] = useState<SupportedLocale>(initialLocale);
+  const [initialTargetLocale] = useState(initialLocale);
   const [messages, setMessages] = useState<LocaleMessages>(initialMessages);
 
   const applyLocale = useCallback((nextLocale: SupportedLocale) => {
@@ -54,13 +84,13 @@ export function AppLocaleProvider({
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(LOCALE_STORAGE_KEY);
-      if (isSupportedLocale(saved) && saved !== locale) {
+      if (isSupportedLocale(saved) && saved !== initialTargetLocale) {
         applyLocale(saved);
       }
     } catch {
       // Ignore storage failures.
     }
-  }, [applyLocale, locale]);
+  }, [applyLocale, initialTargetLocale]);
 
   return (
     <LocaleContext.Provider value={{ locale, setLocale: applyLocale }}>

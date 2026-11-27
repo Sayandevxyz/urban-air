@@ -1,16 +1,16 @@
+// ============================================================================
+// src/hooks/useCitySearch.ts
+// Implements debounced city autocomplete with cancellation and rate-limit state.
+// ============================================================================
+
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { CityLocation } from "@/domain/types";
-import { fetchApiJson } from "@/hooks/apiClient";
 import { useAsyncResource } from "@/hooks/useAsyncResource";
+import { fetchApiJson, parseGeocodePayload } from "@/lib/api-client";
 import { MIN_CITY_QUERY_LENGTH, SEARCH_DEBOUNCE_MS } from "@/lib/constants";
-
-export type SearchStatus = "idle" | "loading" | "success" | "empty" | "error" | "rate_limited";
-
-interface GeocodeApiResponse {
-  readonly results?: readonly CityLocation[];
-}
+import type { CityLocation } from "@/types/air-quality";
+import type { SearchStatus } from "@/types/api";
 
 interface SearchOutcome {
   readonly status: SearchStatus;
@@ -24,7 +24,7 @@ async function fetchSearchOutcome(
   signal: AbortSignal,
 ): Promise<SearchOutcome | null> {
   const params = new URLSearchParams({ q: trimmed, demo: isDemo ? "true" : "false" });
-  const res = await fetchApiJson<GeocodeApiResponse>(`/api/geocode?${params.toString()}`, {
+  const res = await fetchApiJson(`/api/geocode?${params.toString()}`, parseGeocodePayload, {
     signal,
   });
   if (res.ok) {

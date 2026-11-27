@@ -1,8 +1,14 @@
+// ============================================================================
+// src/app/api/geocode/route.ts
+// Serves city autocomplete suggestions via Demo Mode or Open-Meteo geocoding.
+// ============================================================================
+
 import type { NextResponse } from "next/server";
 import { ok } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { getGeocodingProvider, responseFromResult } from "@/services/container";
+import { responseFromResult } from "@/services/container";
 import { searchDemoCities } from "@/services/demo-data";
+import { openMeteoGeocodingProvider } from "@/services/open-meteo";
 import { parseGeocodeParams, withApiHandler } from "@/services/route-helpers";
 
 /**
@@ -15,7 +21,7 @@ export const GET = withApiHandler("geocode", async (request): Promise<NextRespon
   }
 
   logger.info("Geocode search", { queryLength: q.length });
-  const result = await getGeocodingProvider().searchCities(q, request.signal);
+  const result = await openMeteoGeocodingProvider.searchCities(q, request.signal);
   if (!result.ok) {
     return responseFromResult(result);
   }

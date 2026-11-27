@@ -1,3 +1,8 @@
+// ============================================================================
+// src/hooks/useRoutineInputs.ts
+// Manages interactive routine toggle state and direct exposure/CO2 calculations.
+// ============================================================================
+
 "use client";
 
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
@@ -5,13 +10,14 @@ import { assessWinterSmog } from "@/domain/aqi";
 import { calculateDirectImpact } from "@/domain/impact";
 import { scoreActivityWindows } from "@/domain/planner";
 import { buildRoutinesAndAlternatives } from "@/domain/routines";
-import type { AirQualityReport, ResidentProfile } from "@/domain/types";
 import {
   COMMUTE_DEFAULT_KM,
   COMMUTE_MAX_KM,
   OUTDOOR_DEFAULT_HOURS,
   OUTDOOR_MAX_HOURS,
 } from "@/lib/constants";
+import type { AirQualityReport } from "@/types/air-quality";
+import type { ResidentProfile } from "@/types/guidance";
 
 interface RoutineSwitchState {
   readonly swapCarToCleanTransit: boolean;

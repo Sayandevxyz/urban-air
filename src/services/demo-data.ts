@@ -1,23 +1,48 @@
+// ============================================================================
+// src/services/demo-data.ts
+// Provides offline-ready seeded Demo Mode cities and diurnal forecast series.
+// ============================================================================
+
+import { FORECAST_HOURS_WINDOW, ISO_SLICE, TREND_DAYS_WINDOW } from "@/lib/constants";
 import type {
   AirQualityReport,
   CityLocation,
   DailyTrendPoint,
   HourlyForecastPoint,
   PollutantReadings,
-} from "@/domain/types";
-import { FORECAST_HOURS_WINDOW, TREND_DAYS_WINDOW } from "@/lib/constants";
+} from "@/types/air-quality";
 
-interface DemoCitySeed {
+type DayWeights = Record<number, number>;
+const DAY_WEIGHTS: DayWeights = { 0: 1.0, 1: 0.94, 2: 0.88, 3: 0.96, 4: 1.05, 5: 0.9, 6: 0.84 };
+const CFG = {
+  startIso: "2026-11-26T00:00:00Z",
+  updatedIso: "2026-11-26T08:00:00Z",
+  msHour: 3_600_000,
+  msDay: 86_400_000,
+  hoursDay: 24,
+  cleanPeak: 15,
+  half: 0.5,
+  o3Start: 12,
+  o3End: 17,
+  o3Boost: 1.25,
+  o3Off: 0.85,
+  minUs: 12,
+  minEu: 8,
+  pmScale: 10,
+  minAvg: 15,
+  minLow: 10,
+  maxSpread: 0.45,
+  minSpread: 0.75,
+} as const;
+
+type DemoCitySeed = (typeof DEMO_CITY_SEEDS)[number];
+const DEMO_CITY_SEEDS: readonly {
   readonly location: CityLocation;
   readonly baseReadings: PollutantReadings;
   readonly baseUsAqi: number;
   readonly baseEuropeanAqi: number;
   readonly diurnalAmplitude: number;
-}
-
-const DEMO_REFERENCE_START_ISO = "2026-11-26T00:00:00Z";
-
-const DEMO_CITY_SEEDS: readonly DemoCitySeed[] = [
+}[] = [
   {
     location: {
       key: "delhi",
@@ -95,135 +120,77 @@ const DEMO_CITY_SEEDS: readonly DemoCitySeed[] = [
   },
 ];
 
-function buildDiurnalFactor(hourOfDay: number, amplitude: number): number {
-  const afternoonCleanerWave = Math.cos(((hourOfDay - 15) / 24) * Math.PI * 2);
-  return 1 - amplitude * (0.5 + 0.5 * afternoonCleanerWave);
+const roundPm = (val: number) => Math.round(val * CFG.pmScale) / CFG.pmScale;
+
+function buildHourlyPoint(seed: DemoCitySeed, baseMs: number, offset: number): HourlyForecastPoint {
+  const dt = new Date(baseMs + offset * CFG.msHour);
+  const hr = dt.getUTCHours();
+  const angle = ((hr - CFG.cleanPeak) / CFG.hoursDay) * Math.PI * 2;
+  const factor = 1 - seed.diurnalAmplitude * (CFG.half + CFG.half * Math.cos(angle));
+  const o3m = hr >= CFG.o3Start && hr <= CFG.o3End ? CFG.o3Boost : CFG.o3Off;
+  return {
+    timeIso: dt.toISOString(),
+    usAqi: Math.max(CFG.minUs, Math.round(seed.baseUsAqi * factor)),
+    europeanAqi: Math.max(CFG.minEu, Math.round(seed.baseEuropeanAqi * factor)),
+    pm25: roundPm(seed.baseReadings.pm25 * factor),
+    pm10: Math.round(seed.baseReadings.pm10 * factor),
+    no2: Math.round(seed.baseReadings.no2 * factor),
+    o3: Math.round(seed.baseReadings.o3 * o3m),
+  };
 }
 
-function generateHourlySeries(seed: DemoCitySeed): readonly HourlyForecastPoint[] {
-  const baseTimeMs = Date.parse(DEMO_REFERENCE_START_ISO);
-  const points: HourlyForecastPoint[] = [];
-
-  for (let offset = 0; offset < FORECAST_HOURS_WINDOW; offset += 1) {
-    const pointDate = new Date(baseTimeMs + offset * 3_600_000);
-    const hourOfDay = pointDate.getUTCHours();
-    const factor = buildDiurnalFactor(hourOfDay, seed.diurnalAmplitude);
-    const afternoonOzoneBoost = hourOfDay >= 12 && hourOfDay <= 17 ? 1.25 : 0.85;
-
-    points.push({
-      timeIso: pointDate.toISOString(),
-      usAqi: Math.max(12, Math.round(seed.baseUsAqi * factor)),
-      europeanAqi: Math.max(8, Math.round(seed.baseEuropeanAqi * factor)),
-      pm25: Math.round(seed.baseReadings.pm25 * factor * 10) / 10,
-      pm10: Math.round(seed.baseReadings.pm10 * factor),
-      no2: Math.round(seed.baseReadings.no2 * factor),
-      o3: Math.round(seed.baseReadings.o3 * afternoonOzoneBoost),
-    });
-  }
-
-  return points;
+function buildDailyPoint(seed: DemoCitySeed, baseMs: number, day: number): DailyTrendPoint {
+  const mult = DAY_WEIGHTS[day] ?? 1.0;
+  const avg = Math.max(CFG.minAvg, Math.round(seed.baseUsAqi * mult));
+  return {
+    dateIso: new Date(baseMs + day * CFG.msDay).toISOString().slice(0, ISO_SLICE.dateEnd),
+    avgUsAqi: avg,
+    maxUsAqi: Math.round(avg * (1 + seed.diurnalAmplitude * CFG.maxSpread)),
+    minUsAqi: Math.max(CFG.minLow, Math.round(avg * (1 - seed.diurnalAmplitude * CFG.minSpread))),
+    avgPm25: roundPm(seed.baseReadings.pm25 * mult),
+  };
 }
 
-function generateDailySeries(seed: DemoCitySeed): readonly DailyTrendPoint[] {
-  const baseTimeMs = Date.parse(DEMO_REFERENCE_START_ISO);
-  const dayMultipliers = [1.0, 0.94, 0.88, 0.96, 1.05, 0.9, 0.84];
-  const points: DailyTrendPoint[] = [];
-
-  for (let day = 0; day < TREND_DAYS_WINDOW; day += 1) {
-    const date = new Date(baseTimeMs + day * 86_400_000);
-    const mult = dayMultipliers[day] ?? 1.0;
-    const avgUsAqi = Math.max(15, Math.round(seed.baseUsAqi * mult));
-    const maxUsAqi = Math.round(avgUsAqi * (1 + seed.diurnalAmplitude * 0.45));
-    const minUsAqi = Math.max(10, Math.round(avgUsAqi * (1 - seed.diurnalAmplitude * 0.75)));
-    const avgPm25 = Math.round(seed.baseReadings.pm25 * mult * 10) / 10;
-
-    points.push({
-      dateIso: date.toISOString().slice(0, 10),
-      avgUsAqi,
-      maxUsAqi,
-      minUsAqi,
-      avgPm25,
-    });
-  }
-
-  return points;
-}
-
-/**
- * Lists all five built-in Demo Mode city locations.
- */
+/** Lists all five built-in Demo Mode city locations. */
 export function getDemoCityLocations(): readonly CityLocation[] {
   return DEMO_CITY_SEEDS.map((seed) => seed.location);
 }
 
-/**
- * Searches built-in Demo Mode cities matching a query string (used offline or in Demo Mode).
- */
+/** Searches built-in Demo Mode cities matching a query string. */
 export function searchDemoCities(query: string): readonly CityLocation[] {
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) {
-    return getDemoCityLocations();
-  }
-  return DEMO_CITY_SEEDS.filter(
-    (seed) =>
-      seed.location.name.toLowerCase().includes(normalized) ||
-      seed.location.country.toLowerCase().includes(normalized) ||
-      seed.location.region.toLowerCase().includes(normalized),
-  ).map((seed) => seed.location);
+  const q = query.trim().toLowerCase();
+  if (!q) return getDemoCityLocations();
+  return DEMO_CITY_SEEDS.filter(({ location: l }) =>
+    [l.name, l.country, l.region].some((f) => f.toLowerCase().includes(q)),
+  ).map((s) => s.location);
 }
 
-/**
- * Returns a seeded realistic AirQualityReport for a built-in Demo Mode city key or location.
- */
-export function getDemoAirQualityReport(
-  cityKeyOrLocation: string | CityLocation,
-): AirQualityReport {
-  const targetKey =
-    typeof cityKeyOrLocation === "string"
-      ? cityKeyOrLocation.toLowerCase()
-      : cityKeyOrLocation.key.toLowerCase();
+function findClosestSeed(target: string | CityLocation): DemoCitySeed {
+  const first = DEMO_CITY_SEEDS[0];
+  if (!first) throw new Error("DEMO_CITY_SEEDS must contain at least one city.");
+  if (typeof target === "string") return first;
+  const dist = (a: CityLocation) =>
+    (a.latitude - target.latitude) ** 2 + (a.longitude - target.longitude) ** 2;
+  return DEMO_CITY_SEEDS.reduce((b, c) => (dist(c.location) < dist(b.location) ? c : b), first);
+}
 
-  const matchedSeed =
-    DEMO_CITY_SEEDS.find((seed) => seed.location.key === targetKey) ??
-    findClosestDemoSeed(cityKeyOrLocation);
-
-  const location = typeof cityKeyOrLocation === "string" ? matchedSeed.location : cityKeyOrLocation;
-
+/** Returns a seeded realistic AirQualityReport for a Demo Mode city key or location. */
+export function getDemoAirQualityReport(cityKeyOrLoc: string | CityLocation): AirQualityReport {
+  const key = (typeof cityKeyOrLoc === "string" ? cityKeyOrLoc : cityKeyOrLoc.key).toLowerCase();
+  const seed = DEMO_CITY_SEEDS.find((s) => s.location.key === key) ?? findClosestSeed(cityKeyOrLoc);
+  const baseMs = Date.parse(CFG.startIso);
   return {
-    location,
-    updatedAtIso: "2026-11-26T08:00:00Z",
+    location: typeof cityKeyOrLoc === "string" ? seed.location : cityKeyOrLoc,
+    updatedAtIso: CFG.updatedIso,
     source: "demo",
     current: {
-      usAqi: matchedSeed.baseUsAqi,
-      europeanAqi: matchedSeed.baseEuropeanAqi,
-      readings: matchedSeed.baseReadings,
+      usAqi: seed.baseUsAqi,
+      europeanAqi: seed.baseEuropeanAqi,
+      readings: seed.baseReadings,
     },
-    hourly: generateHourlySeries(matchedSeed),
-    daily: generateDailySeries(matchedSeed),
+    hourly: Array.from({ length: FORECAST_HOURS_WINDOW }, (_, i) =>
+      buildHourlyPoint(seed, baseMs, i),
+    ),
+    daily: Array.from({ length: TREND_DAYS_WINDOW }, (_, d) => buildDailyPoint(seed, baseMs, d)),
   };
-}
-
-function findClosestDemoSeed(cityKeyOrLocation: string | CityLocation): DemoCitySeed {
-  const fallbackSeed = DEMO_CITY_SEEDS[0];
-  if (!fallbackSeed) {
-    throw new Error("DEMO_CITY_SEEDS must contain at least one city.");
-  }
-  if (typeof cityKeyOrLocation === "string") {
-    return fallbackSeed;
-  }
-
-  let bestSeed: DemoCitySeed = fallbackSeed;
-  let bestDistance = Number.POSITIVE_INFINITY;
-
-  for (const seed of DEMO_CITY_SEEDS) {
-    const dLat = seed.location.latitude - cityKeyOrLocation.latitude;
-    const dLon = seed.location.longitude - cityKeyOrLocation.longitude;
-    const dist = dLat * dLat + dLon * dLon;
-    if (dist < bestDistance) {
-      bestDistance = dist;
-      bestSeed = seed;
-    }
-  }
-
-  return bestSeed;
 }

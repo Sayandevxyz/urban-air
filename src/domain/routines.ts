@@ -1,10 +1,15 @@
-import type {
-  PollutantReadings,
-  ResidentProfile,
-  RoutineAlternative,
-  SmogAssessment,
-} from "@/domain/types";
+// ============================================================================
+// src/domain/routines.ts
+// Recommends low-emission daily routines tailored to pollution and lifestyle.
+// ============================================================================
 
+import { US_AQI_TIER_THRESHOLDS } from "@/lib/constants";
+import type { PollutantReadings, SmogAssessment } from "@/types/air-quality";
+import type { ResidentProfile, RoutineAlternative } from "@/types/guidance";
+
+const TRAFFIC_HIGH_NO2_UG_M3 = 60;
+
+/** Input contract used to build low-emission daily routine alternatives. */
 export interface RoutinesInput {
   readonly usAqi: number;
   readonly smog: SmogAssessment;
@@ -20,7 +25,8 @@ function collectCommuteRoutines(input: RoutinesInput): RoutineAlternative[] {
     list.push({
       id: "shift_to_transit_or_active",
       category: "commute",
-      priority: smog.isWinterSmogAlert || readings.no2 >= 60 ? "high" : "medium",
+      priority:
+        smog.isWinterSmogAlert || readings.no2 >= TRAFFIC_HIGH_NO2_UG_M3 ? "high" : "medium",
       suggestedHourIso: bestWindowHourIso,
     });
   }
@@ -50,24 +56,22 @@ function collectCommuteRoutines(input: RoutinesInput): RoutineAlternative[] {
   return list;
 }
 
-/**
- * Recommends low-emission daily routines and sustainable alternatives tailored to
- * the resident's local pollution profile, commute mode, and home energy setup.
- */
+/** Recommends low-emission daily routines tailored to local pollution, commute, and energy setup. */
 export function buildRoutinesAndAlternatives(input: RoutinesInput): readonly RoutineAlternative[] {
   const routines = collectCommuteRoutines(input);
+  const isElevatedAqi = input.usAqi >= US_AQI_TIER_THRESHOLDS.sensitive;
   if (input.profile.homeEnergyMode === "gas_biomass") {
     routines.push({
       id: "clean_cooking_switch",
       category: "home",
-      priority: input.usAqi >= 101 ? "high" : "medium",
+      priority: isElevatedAqi ? "high" : "medium",
       suggestedHourIso: undefined,
     });
   }
   routines.push({
     id: "outdoor_exercise_reschedule",
     category: "exercise",
-    priority: input.usAqi >= 101 ? "high" : "medium",
+    priority: isElevatedAqi ? "high" : "medium",
     suggestedHourIso: input.bestWindowHourIso,
   });
   return routines;

@@ -1,3 +1,8 @@
+// ============================================================================
+// src/components/AppHeader.tsx
+// Renders skip link, title, Demo Mode toggle, language switcher, and nav links.
+// ============================================================================
+
 "use client";
 
 import { useTranslations } from "next-intl";
@@ -45,13 +50,53 @@ function HeaderNav() {
   );
 }
 
-/**
- * Semantic header landmark with skip link, Demo mode switch, language toggle, and section links.
- */
-export function AppHeader({ demoMode, onToggleDemoMode }: AppHeaderProps) {
+function HeaderModeControls({ demoMode, onToggleDemoMode }: AppHeaderProps) {
   const t = useTranslations("app");
   const { locale, setLocale } = useAppLocale();
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={demoMode}
+        onClick={onToggleDemoMode}
+        className={`min-h-[44px] rounded-lg border-2 px-4 py-2 text-sm font-semibold transition-colors ${
+          demoMode
+            ? "border-accent bg-accent text-accent-ink"
+            : "border-borderc-strong bg-surface text-ink hover:bg-surface-muted"
+        }`}
+      >
+        {t("demoModeToggle")}: {demoMode ? t("demoModeOn") : t("demoModeOff")}
+      </button>
 
+      <div className="flex items-center gap-2">
+        <label htmlFor="language-select" className="text-sm font-semibold text-ink">
+          {t("languageLabel")}
+        </label>
+        <select
+          id="language-select"
+          name="language"
+          value={locale}
+          onChange={(event) => {
+            const value = event.target.value;
+            if (value === "en" || value === "hi" || value === "ta") setLocale(value);
+          }}
+          className="min-h-[44px] rounded-lg border-2 border-borderc-strong bg-surface-elevated px-3 py-2 text-base font-medium text-ink"
+        >
+          {(["en", "hi", "ta"] as const).map((code) => (
+            <option key={code} value={code}>
+              {LOCALE_LABELS[code]}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+/** Semantic header landmark with skip link, Demo mode switch, language toggle, and links. */
+export function AppHeader({ demoMode, onToggleDemoMode }: AppHeaderProps) {
+  const t = useTranslations("app");
   return (
     <header className="border-b border-borderc bg-surface-elevated">
       <a
@@ -73,46 +118,8 @@ export function AppHeader({ demoMode, onToggleDemoMode }: AppHeaderProps) {
             </h1>
             <p className="mt-1 text-base text-ink-muted">{t("subtitle")}</p>
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={demoMode}
-              onClick={onToggleDemoMode}
-              className={`min-h-[44px] rounded-lg border-2 px-4 py-2 text-sm font-semibold transition-colors ${
-                demoMode
-                  ? "border-accent bg-accent text-accent-ink"
-                  : "border-borderc-strong bg-surface text-ink hover:bg-surface-muted"
-              }`}
-            >
-              {t("demoModeToggle")}: {demoMode ? t("demoModeOn") : t("demoModeOff")}
-            </button>
-
-            <div className="flex items-center gap-2">
-              <label htmlFor="language-select" className="text-sm font-semibold text-ink">
-                {t("languageLabel")}
-              </label>
-              <select
-                id="language-select"
-                name="language"
-                value={locale}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  if (value === "en" || value === "hi" || value === "ta") setLocale(value);
-                }}
-                className="min-h-[44px] rounded-lg border-2 border-borderc-strong bg-surface-elevated px-3 py-2 text-base font-medium text-ink"
-              >
-                {(["en", "hi", "ta"] as const).map((code) => (
-                  <option key={code} value={code}>
-                    {LOCALE_LABELS[code]}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <HeaderModeControls demoMode={demoMode} onToggleDemoMode={onToggleDemoMode} />
         </div>
-
         <HeaderNav />
       </div>
     </header>

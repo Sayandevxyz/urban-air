@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# ============================================================================
+# scripts/check-secrets.sh
+# Scans tracked files and .env templates for secrets or committed env files.
+# ============================================================================
 set -euo pipefail
 
 echo "==> Scanning tracked repository files for accidental secrets or committed .env files..."

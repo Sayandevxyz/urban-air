@@ -1,9 +1,17 @@
+// ============================================================================
+// src/services/assistant.ts
+// Orchestrates prompt-injection defense, grounded LLM calls, and fallbacks.
+// ============================================================================
+
 import { z } from "zod";
 import { LLM_TIMEOUT_MS, MAX_LLM_OUTPUT_TOKENS } from "@/lib/constants";
 import { getEnv, type ValidatedEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
-import { generateGroundedFallbackReply } from "@/services/assistantFallback";
-import { buildSystemInstruction, buildUserEnvelope } from "@/services/assistantPrompt";
+import {
+  buildSystemInstruction,
+  buildUserEnvelope,
+  generateGroundedFallbackReply,
+} from "@/services/assistant-responses";
 import {
   detectPromptInjection,
   DISCLAIMERS,
@@ -12,20 +20,10 @@ import {
   REFUSAL_MESSAGES,
   sanitizeAssistantOutput,
   sanitizeUserPrompt,
-} from "@/services/assistantSanitize";
+} from "@/services/assistant-sanitize";
 import { fetchJsonWithGuard } from "@/services/http";
 import type { ChatRequestPayload } from "@/services/schemas";
-
-export type { ChatRequestPayload };
-
-export interface AssistantResponsePayload {
-  readonly reply: string;
-  readonly engine: "gemini" | "anthropic" | "fallback";
-  readonly refused: boolean;
-  readonly dataSource: string;
-  readonly updatedAtIso: string;
-  readonly disclaimer: string;
-}
+import type { AssistantResponsePayload } from "@/types/api";
 
 const geminiResponseSchema = z.object({
   candidates: z

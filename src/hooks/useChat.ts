@@ -1,28 +1,22 @@
+// ============================================================================
+// src/hooks/useChat.ts
+// Manages grounded chat turns, submission state, and error handling.
+// ============================================================================
+
 "use client";
 
 import { useState } from "react";
 import { scoreActivityWindows } from "@/domain/planner";
-import type { AirQualityReport, ResidentProfile } from "@/domain/types";
-import { fetchApiJson } from "@/hooks/apiClient";
 import { useAsyncResource } from "@/hooks/useAsyncResource";
+import { fetchApiJson } from "@/lib/api-client";
 import type { SupportedLocale } from "@/lib/constants";
+import { toMap, toStr } from "@/lib/errors";
 import type { ChatRequestPayload } from "@/services/schemas";
+import type { AirQualityReport } from "@/types/air-quality";
+import type { AssistantResponsePayload, ChatTurn } from "@/types/api";
+import type { ResidentProfile } from "@/types/guidance";
 
-export interface ChatTurn {
-  readonly id: string;
-  readonly role: "user" | "assistant";
-  readonly text: string;
-  readonly meta?: string | undefined;
-}
-
-interface ChatApiSuccess {
-  readonly reply: string;
-  readonly engine: "gemini" | "anthropic" | "fallback";
-  readonly refused: boolean;
-  readonly dataSource: string;
-  readonly updatedAtIso: string;
-  readonly disclaimer: string;
-}
+export type { ChatTurn };
 
 /**
  * Constructs a validated grounded chat request body from the active city report and resident profile.
@@ -51,11 +45,35 @@ function buildChatRequest(
   };
 }
 
+function parseAssistantPayload(raw: unknown): AssistantResponsePayload | null {
+  try {
+    const m = toMap(raw);
+    const engine = m.get("engine");
+    const refused = m.get("refused");
+    if (
+      (engine !== "gemini" && engine !== "anthropic" && engine !== "fallback") ||
+      typeof refused !== "boolean"
+    ) {
+      return null;
+    }
+    return {
+      reply: toStr(m.get("reply")),
+      engine,
+      refused,
+      dataSource: toStr(m.get("dataSource")),
+      updatedAtIso: toStr(m.get("updatedAtIso")),
+      disclaimer: toStr(m.get("disclaimer")),
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Dispatches a grounded chat request to POST /api/chat via the shared API client.
  */
 function sendChatRequest(payload: ChatRequestPayload, signal?: AbortSignal) {
-  return fetchApiJson<ChatApiSuccess>("/api/chat", {
+  return fetchApiJson("/api/chat", parseAssistantPayload, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -67,7 +85,7 @@ function sendChatRequest(payload: ChatRequestPayload, signal?: AbortSignal) {
  * Formats an assistant turn payload for display cleanly as plain text.
  */
 function applyChatReply(
-  data: ChatApiSuccess,
+  data: AssistantResponsePayload,
   labels: { readonly fallbackBadge: string; readonly liveLlmBadge: string },
 ): ChatTurn {
   const engineBadge = data.engine === "fallback" ? labels.fallbackBadge : labels.liveLlmBadge;

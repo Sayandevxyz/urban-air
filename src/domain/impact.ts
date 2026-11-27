@@ -1,11 +1,16 @@
+// ============================================================================
+// src/domain/impact.ts
+// Quantifies personal PM2.5 inhalation avoided and community emissions saved.
+// ============================================================================
+
+import type { PollutantReadings } from "@/types/air-quality";
 import type {
   CommuteMode,
   DirectImpactResult,
   ImpactBreakdownItem,
   ImpactChoiceInput,
-  PollutantReadings,
   ResidentProfile,
-} from "@/domain/types";
+} from "@/types/guidance";
 
 const OUTDOOR_ACTIVE_VENTILATION_M3_PER_HOUR = 1.8;
 const INDOOR_REST_VENTILATION_M3_PER_HOUR = 0.5;
@@ -16,6 +21,8 @@ const INDOOR_INFILTRATION_FACTOR = 0.65;
 const INDOOR_FILTRATION_EXPOSURE_HOURS = 8;
 const CLEAN_COOKING_PM25_REDUCTION_UG_M3 = 35;
 const COOKING_EXPOSURE_HOURS = 1.5;
+const MAX_PERSONAL_REDUCTION_PERCENT = 99;
+const PERCENT_MULTIPLIER = 100;
 
 const COMMUTE_CO2_G_PER_KM: Readonly<Record<CommuteMode, number>> = {
   car: 171,
@@ -44,7 +51,8 @@ function computeCommuteSavings(
     id: "commute_emissions",
     pm25AvoidedUg: 0,
     co2SavedGrams: Math.round(co2Diff * choices.commuteDistanceKm),
-    noxSavedGrams: Math.round(noxDiff * choices.commuteDistanceKm * 100) / 100,
+    noxSavedGrams:
+      Math.round(noxDiff * choices.commuteDistanceKm * PERCENT_MULTIPLIER) / PERCENT_MULTIPLIER,
   };
 }
 
@@ -117,10 +125,7 @@ function computeIndoorAndCookingSavings(
   };
 }
 
-/**
- * Quantifies the direct personal exposure reduction (ug PM2.5 avoided) and community
- * emissions avoided (g CO2e, g NOx) from a resident's chosen routine and indoor air swaps.
- */
+/** Quantifies personal PM2.5 inhalation avoided (ug) and community emissions saved (CO2e/NOx). */
 export function calculateDirectImpact(
   choices: ImpactChoiceInput,
   readings: PollutantReadings,
@@ -144,7 +149,10 @@ export function calculateDirectImpact(
 
   const personalReductionPercent =
     baselineOutdoorPm25InhaledUg > 0
-      ? Math.min(99, Math.round((personalPm25AvoidedUg / baselineOutdoorPm25InhaledUg) * 100))
+      ? Math.min(
+          MAX_PERSONAL_REDUCTION_PERCENT,
+          Math.round((personalPm25AvoidedUg / baselineOutdoorPm25InhaledUg) * PERCENT_MULTIPLIER),
+        )
       : 0;
 
   return {

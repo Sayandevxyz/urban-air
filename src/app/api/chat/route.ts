@@ -1,5 +1,10 @@
+// ============================================================================
+// src/app/api/chat/route.ts
+// Serves grounded AI or rule-based answers with burst and daily rate limits.
+// ============================================================================
+
 import { NextResponse } from "next/server";
-import { MAX_CHAT_PAYLOAD_BYTES } from "@/lib/constants";
+import { HTTP_STATUS, MAX_CHAT_PAYLOAD_BYTES } from "@/lib/constants";
 import { answerAirQualityQuestion } from "@/services/assistant";
 import { getDailyLlmRateLimiter } from "@/services/container";
 import { enforceRateLimit } from "@/services/rate-limit";
@@ -15,7 +20,7 @@ export const POST = withApiHandler("chat", async (request): Promise<NextResponse
   const payload = await parseJsonBody(request, chatRequestSchema, MAX_CHAT_PAYLOAD_BYTES);
   const result = await answerAirQualityQuestion(payload, request.signal);
   return NextResponse.json(result, {
-    status: 200,
+    status: HTTP_STATUS.OK,
     headers: { "Cache-Control": "no-store" },
   });
 });
