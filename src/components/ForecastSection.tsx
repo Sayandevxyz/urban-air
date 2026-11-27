@@ -1,9 +1,14 @@
+// ============================================================================
+// src/components/ForecastSection.tsx
+// Pairs 48h and 7-day SVG charts with toggleable semantic HTML data tables.
+// ============================================================================
+
 "use client";
 
 import { useTranslations } from "next-intl";
 import { useState, type ReactNode } from "react";
 import { DailyTrend, HourlyChart } from "@/components/ForecastCharts";
-import { HOURLY_PREVIEW_COUNT } from "@/lib/constants";
+import { HOURLY_PREVIEW_COUNT, ISO_SLICE } from "@/lib/constants";
 import type { AirQualityReport, DailyTrendPoint, HourlyForecastPoint } from "@/types/air-quality";
 
 function ForecastTableShell({
@@ -48,7 +53,7 @@ function HourlyRows({ hourly }: { readonly hourly: readonly HourlyForecastPoint[
   return hourly.slice(0, HOURLY_PREVIEW_COUNT).map((point) => (
     <tr key={point.timeIso} className="border-t border-borderc">
       <th scope="row" className="p-2.5 font-medium text-ink">
-        {point.timeIso.slice(0, 16).replace("T", " ")}
+        {point.timeIso.slice(0, ISO_SLICE.minuteEnd).replace("T", " ")}
       </th>
       <td className="p-2.5 tabular-nums">{point.usAqi}</td>
       <td className="p-2.5 tabular-nums">{point.europeanAqi}</td>
@@ -85,19 +90,11 @@ function ForecastDataTable({
 }) {
   const t = useTranslations("forecast");
   if (activeRange === "hourly") {
-    const hourlyHeaders = [
-      "tableTime",
-      "tableUsAqi",
-      "tableEuAqi",
-      "tablePm25",
-      "tableNo2",
-      "tableO3",
-    ];
     return (
       <ForecastTableShell
         captionId="hourly-table-caption"
         caption={t("tableCaptionHourly")}
-        headerKeys={hourlyHeaders}
+        headerKeys={["tableTime", "tableUsAqi", "tableEuAqi", "tablePm25", "tableNo2", "tableO3"]}
       >
         <HourlyRows hourly={hourly} />
       </ForecastTableShell>
@@ -107,27 +104,63 @@ function ForecastDataTable({
     <ForecastTableShell
       captionId="daily-table-caption"
       caption={t("tableCaptionDaily")}
-      headerKeys={["tableDate", "tableAvgUsAqi", "tableRangeUsAqi", "tableAvgPm25"]}
+      headerKeys={["tableDate", "tableAvgAqi", "tableRangeAqi", "tablePm25"]}
     >
       <DailyRows daily={daily} />
     </ForecastTableShell>
   );
 }
 
-/**
- * Interactive forecast section pairing accessible SVG charts with semantic HTML data tables.
- */
+function ForecastRangeControls({
+  activeRange,
+  showTable,
+  onSelectRange,
+  onToggleTable,
+}: {
+  readonly activeRange: "hourly" | "daily";
+  readonly showTable: boolean;
+  readonly onSelectRange: (next: "hourly" | "daily") => void;
+  readonly onToggleTable: () => void;
+}) {
+  const t = useTranslations("forecast");
+  const baseBtn = "min-h-[44px] rounded-lg border-2 px-3 py-2 text-sm font-semibold";
+  const tabClass = (active: boolean) =>
+    `${baseBtn} ${active ? "border-accent bg-accent text-accent-ink" : "border-borderc bg-surface text-ink hover:bg-surface-muted"}`;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div role="group" aria-label={t("sectionTitle")} className="flex flex-wrap gap-2">
+        {(["hourly", "daily"] as const).map((range) => (
+          <button
+            key={range}
+            type="button"
+            aria-pressed={activeRange === range}
+            onClick={() => {
+              onSelectRange(range);
+            }}
+            className={tabClass(activeRange === range)}
+          >
+            {t(range === "hourly" ? "hourlyTab" : "dailyTab")}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        aria-pressed={showTable}
+        onClick={onToggleTable}
+        className={`${baseBtn} border-borderc-strong bg-surface text-ink hover:bg-surface-muted`}
+      >
+        {t(showTable ? "showChart" : "showTable")}
+      </button>
+    </div>
+  );
+}
+
+/** Interactive forecast section pairing accessible SVG charts with semantic HTML data tables. */
 export function ForecastSection({ report }: { readonly report: AirQualityReport }) {
   const t = useTranslations("forecast");
   const [activeRange, setActiveRange] = useState<"hourly" | "daily">("hourly");
   const [showTable, setShowTable] = useState(false);
-
-  const tabClass = (active: boolean) =>
-    `min-h-[44px] rounded-lg border-2 px-3 py-2 text-sm font-semibold ${
-      active
-        ? "border-accent bg-accent text-accent-ink"
-        : "border-borderc bg-surface text-ink hover:bg-surface-muted"
-    }`;
 
   return (
     <section
@@ -138,35 +171,15 @@ export function ForecastSection({ report }: { readonly report: AirQualityReport 
         <h2 id="forecast-heading" className="text-xl font-bold text-ink">
           {t("sectionTitle")}
         </h2>
-        <div className="flex flex-wrap items-center gap-2">
-          <div role="group" aria-label={t("sectionTitle")} className="flex flex-wrap gap-2">
-            {(["hourly", "daily"] as const).map((range) => (
-              <button
-                key={range}
-                type="button"
-                aria-pressed={activeRange === range}
-                onClick={() => {
-                  setActiveRange(range);
-                }}
-                className={tabClass(activeRange === range)}
-              >
-                {t(range === "hourly" ? "hourlyTab" : "dailyTab")}
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            aria-pressed={showTable}
-            onClick={() => {
-              setShowTable((prev) => !prev);
-            }}
-            className="min-h-[44px] rounded-lg border-2 border-borderc-strong bg-surface px-3 py-2 text-sm font-semibold text-ink hover:bg-surface-muted"
-          >
-            {showTable ? t("showChart") : t("showTable")}
-          </button>
-        </div>
+        <ForecastRangeControls
+          activeRange={activeRange}
+          showTable={showTable}
+          onSelectRange={setActiveRange}
+          onToggleTable={() => {
+            setShowTable((prev) => !prev);
+          }}
+        />
       </div>
-
       {showTable ? (
         <ForecastDataTable activeRange={activeRange} hourly={report.hourly} daily={report.daily} />
       ) : activeRange === "hourly" ? (

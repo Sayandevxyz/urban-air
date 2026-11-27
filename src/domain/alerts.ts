@@ -1,9 +1,12 @@
+// ============================================================================
+// src/domain/alerts.ts
+// Evaluates user-defined local threshold alert rules against loaded reports.
+// ============================================================================
+
 import type { AirQualityReport } from "@/types/air-quality";
 import type { ThresholdAlertRule, TriggeredAlert } from "@/types/guidance";
 
-/**
- * Evaluates enabled user threshold alert rules against loaded air quality snapshots.
- */
+/** Evaluates enabled threshold alert rules against loaded city air-quality reports. */
 export function evaluateThresholdAlerts(
   rules: readonly ThresholdAlertRule[],
   reports: Readonly<Record<string, AirQualityReport>>,

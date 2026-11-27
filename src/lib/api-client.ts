@@ -1,4 +1,9 @@
-import { DEFAULT_RETRY_AFTER_SECONDS } from "@/lib/constants";
+// ============================================================================
+// src/lib/api-client.ts
+// Executes typed client API fetches, offline snapshot reads, and AQI queries.
+// ============================================================================
+
+import { DEFAULT_RETRY_AFTER_SECONDS, HTTP_STATUS } from "@/lib/constants";
 import { safeJsonParse } from "@/lib/errors";
 import { getDemoAirQualityReport } from "@/services/demo-data";
 import type { AirQualityReport, CityLocation } from "@/types/air-quality";
@@ -37,7 +42,7 @@ function buildClientRequestInit(options?: ApiRequestOptions): RequestInit {
 function mapResponseResult<T>(response: Response, rawText: string): ApiFetchResult<T> {
   const parsed = safeJsonParse(rawText);
   const body = parsed.ok ? parsed.value : undefined;
-  if (response.status === 429) {
+  if (response.status === HTTP_STATUS.TOO_MANY_REQUESTS) {
     return { ok: false, kind: "rate_limited", retryAfterSeconds: extractRetryAfterSeconds(body) };
   }
   if (!response.ok || body === undefined) {
@@ -123,7 +128,7 @@ export async function fetchAirQuality(
     signal,
   });
   if (!res.ok) return res;
-  if (!res.data.report) return { ok: false, kind: "error", status: 502 };
+  if (!res.data.report) return { ok: false, kind: "error", status: HTTP_STATUS.BAD_GATEWAY };
   saveCachedSnapshot(res.data.report);
   return { ok: true, data: res.data.report };
 }

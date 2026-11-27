@@ -1,11 +1,25 @@
+// ============================================================================
+// src/types/guidance.ts
+// Defines resident profiles, guidance outputs, routines, planner, and alerts.
+// ============================================================================
+
+/** Resident sensitivity persona used to tailor mask, window, and activity limits. */
 export type PersonaId =
   "general" | "children" | "elderly" | "asthma" | "pregnant" | "athlete" | "worker";
 
+/** Primary daily commute mode used in routine recommendations and CO2/NOx math. */
 export type CommuteMode = "car" | "transit" | "two_wheeler" | "walk_cycle";
+
+/** Primary household cooking and heating fuel affecting indoor PM2.5 and NO2. */
 export type HomeEnergyMode = "gas_biomass" | "electric_induction";
+
+/** Existing indoor filtration setup determining priority HEPA vs DIY box-fan hacks. */
 export type FiltrationMode = "none" | "hepa" | "diy_box_fan";
+
+/** Supported outdoor activity or ventilation window evaluated by the planner. */
 export type ActivityType = "run" | "cycle" | "walk" | "ventilate";
 
+/** Resident lifestyle and household configuration tailoring guidance and impact. */
 export interface ResidentProfile {
   readonly persona: PersonaId;
   readonly commuteMode: CommuteMode;
@@ -13,14 +27,18 @@ export interface ResidentProfile {
   readonly filtrationMode: FiltrationMode;
 }
 
+/** Translation key union selecting mask protection advice. */
 export type MaskAdviceKey =
   "none_needed" | "optional_sensitive" | "n95_recommended" | "n95_required";
 
+/** Translation key union selecting window ventilation advice. */
 export type WindowsAdviceKey = "open_cross_ventilation" | "brief_clean_window" | "keep_sealed";
 
+/** Translation key union selecting outdoor activity pacing limits. */
 export type OutdoorAdviceKey =
   "normal_outdoor" | "pace_outdoors" | "shift_indoors" | "avoid_outdoors";
 
+/** Tailored protection plan combining mask, window, activity, and checklist keys. */
 export interface PersonaGuidance {
   readonly persona: PersonaId;
   readonly maskAdvice: MaskAdviceKey;
@@ -31,6 +49,7 @@ export interface PersonaGuidance {
   readonly checklistKeys: readonly string[];
 }
 
+/** Prioritized indoor air quality mitigation action tailored to home energy/filters. */
 export interface IndoorAirHack {
   readonly id:
     | "seal_smog_drafts"
@@ -43,6 +62,7 @@ export interface IndoorAirHack {
   readonly priority: "critical" | "high" | "standard";
 }
 
+/** Low-emission daily routine recommendation tailored to smog and lifestyle. */
 export interface RoutineAlternative {
   readonly id:
     | "shift_to_transit_or_active"
@@ -56,6 +76,7 @@ export interface RoutineAlternative {
   readonly suggestedHourIso: string | undefined;
 }
 
+/** Interactive toggle and duration inputs modeled by the direct impact calculator. */
 export interface ImpactChoiceInput {
   readonly commuteDistanceKm: number;
   readonly swapCarToCleanTransit: boolean;
@@ -67,6 +88,7 @@ export interface ImpactChoiceInput {
   readonly bestWindowPm25UgM3: number;
 }
 
+/** Single action's contribution to PM2.5 inhalation avoidance and emissions savings. */
 export interface ImpactBreakdownItem {
   readonly id:
     | "commute_emissions"
@@ -79,6 +101,7 @@ export interface ImpactBreakdownItem {
   readonly noxSavedGrams: number;
 }
 
+/** Quantified personal exposure reduction and community emissions impact summary. */
 export interface DirectImpactResult {
   readonly personalPm25AvoidedUg: number;
   readonly baselineOutdoorPm25InhaledUg: number;
@@ -88,6 +111,7 @@ export interface DirectImpactResult {
   readonly breakdown: readonly ImpactBreakdownItem[];
 }
 
+/** Hourly planner suitability score (0-100) with transparent penalty breakdown. */
 export interface ActivityScorePoint {
   readonly timeIso: string;
   readonly score: number;
@@ -99,6 +123,7 @@ export interface ActivityScorePoint {
   readonly timeSuitabilityBonus: number;
 }
 
+/** Best/worst window recommendation and hourly score timeline from planner scoring. */
 export interface ActivityPlanResult {
   readonly activity: ActivityType;
   readonly persona: PersonaId;
@@ -107,6 +132,7 @@ export interface ActivityPlanResult {
   readonly timeline: readonly ActivityScorePoint[];
 }
 
+/** User-configured browser localStorage alert threshold rule. */
 export interface ThresholdAlertRule {
   readonly id: string;
   readonly cityKey: string;
@@ -116,6 +142,7 @@ export interface ThresholdAlertRule {
   readonly enabled: boolean;
 }
 
+/** Active alert warning emitted when a loaded report exceeds a rule's threshold. */
 export interface TriggeredAlert {
   readonly ruleId: string;
   readonly cityKey: string;

@@ -1,7 +1,12 @@
+// ============================================================================
+// src/services/assistant-responses.ts
+// Builds isolated LLM prompts and deterministic localized fallback replies.
+// ============================================================================
+
 import { assessPollutants, assessWinterSmog, classifyUsAqi } from "@/domain/aqi";
 import { buildIndoorAirHacks, buildPersonaGuidance } from "@/domain/guidance";
 import { calculateDirectImpact } from "@/domain/impact";
-import { COMMUTE_DEFAULT_KM, type SupportedLocale } from "@/lib/constants";
+import { COMMUTE_DEFAULT_KM, ISO_SLICE, type SupportedLocale } from "@/lib/constants";
 import type { ChatRequestPayload } from "@/services/schemas";
 
 const BEST_WINDOW_PM25_ESTIMATE_FACTOR = 0.65;
@@ -95,7 +100,7 @@ function buildTemplateData(payload: ChatRequestPayload): FallbackTemplateData {
   const impact = computeDefaultImpactEstimate(payload);
   const bestWindowPart =
     ctx.bestWindowIso && ctx.bestWindowUsAqi !== undefined
-      ? `${ctx.bestWindowIso.slice(11, 16)} UTC (US AQI ${ctx.bestWindowUsAqi})`
+      ? `${ctx.bestWindowIso.slice(ISO_SLICE.hourStart, ISO_SLICE.minuteEnd)} UTC (US AQI ${ctx.bestWindowUsAqi})`
       : `current level (US AQI ${ctx.usAqi})`;
 
   return {

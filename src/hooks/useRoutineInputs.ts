@@ -1,3 +1,8 @@
+// ============================================================================
+// src/hooks/useRoutineInputs.ts
+// Manages interactive routine toggle state and direct exposure/CO2 calculations.
+// ============================================================================
+
 "use client";
 
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";

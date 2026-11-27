@@ -1,3 +1,8 @@
+// ============================================================================
+// src/components/LocaleContext.tsx
+// Provides lazy-loaded runtime i18n catalogs (en/hi/ta) and <html lang> sync.
+// ============================================================================
+
 "use client";
 
 import { NextIntlClientProvider } from "next-intl";

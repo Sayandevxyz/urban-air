@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# ============================================================================
+# scripts/audit.sh
+# Runs verification, security, bundle, coverage, docs, and live HTTP audits.
+# ============================================================================
 set -uo pipefail
 
 PASS_COUNT=0

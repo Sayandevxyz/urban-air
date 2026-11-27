@@ -1,8 +1,14 @@
+// ============================================================================
+// src/components/ActivityPlanner.tsx
+// Renders transparent O(n) best/worst time windows for outdoor activities.
+// ============================================================================
+
 "use client";
 
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { scoreActivityWindows } from "@/domain/planner";
+import { ISO_SLICE } from "@/lib/constants";
 import type { AirQualityReport } from "@/types/air-quality";
 import type { ActivityScorePoint, ActivityType, PersonaId } from "@/types/guidance";
 
@@ -12,6 +18,40 @@ interface ActivityPlannerProps {
 }
 
 const ACTIVITIES: readonly ActivityType[] = ["run", "cycle", "walk", "ventilate"];
+
+function ActivitySelector({
+  activity,
+  onSelect,
+}: {
+  readonly activity: ActivityType;
+  readonly onSelect: (next: ActivityType) => void;
+}) {
+  const t = useTranslations("planner");
+  return (
+    <div role="group" aria-label={t("activityLabel")} className="flex flex-wrap gap-2">
+      {ACTIVITIES.map((item) => {
+        const selected = activity === item;
+        return (
+          <button
+            key={item}
+            type="button"
+            aria-pressed={selected}
+            onClick={() => {
+              onSelect(item);
+            }}
+            className={`min-h-[44px] rounded-lg border-2 px-4 py-2 text-sm font-semibold ${
+              selected
+                ? "border-accent bg-accent text-accent-ink"
+                : "border-borderc bg-surface text-ink hover:bg-surface-muted"
+            }`}
+          >
+            {t(`activities.${item}`)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function WindowExtremeCard({
   variant,
@@ -32,7 +72,7 @@ function WindowExtremeCard({
         {isBest ? t("bestWindowTitle") : t("worstWindowTitle")}
       </h3>
       <p className="mt-1 text-2xl font-extrabold tabular-nums">
-        {windowPoint.timeIso.slice(11, 16)} UTC
+        {windowPoint.timeIso.slice(ISO_SLICE.hourStart, ISO_SLICE.minuteEnd)} UTC
       </p>
       <p className="mt-1 text-base font-bold">{t("scoreLabel", { score: windowPoint.score })}</p>
       <p className="mt-1 text-sm">
@@ -56,9 +96,7 @@ function WindowExtremeCard({
   );
 }
 
-/**
- * Recommends optimal daily windows for outdoor activities and ventilation with O(n) score breakdown.
- */
+/** Recommends optimal daily windows for outdoor activities and ventilation with O(n) score breakdown. */
 export function ActivityPlanner({ report, persona }: ActivityPlannerProps) {
   const t = useTranslations("planner");
   const [activity, setActivity] = useState<ActivityType>("run");
@@ -74,28 +112,7 @@ export function ActivityPlanner({ report, persona }: ActivityPlannerProps) {
         <h2 id="planner-heading" className="text-xl font-bold text-ink">
           {t("sectionTitle")}
         </h2>
-        <div role="group" aria-label={t("activityLabel")} className="flex flex-wrap gap-2">
-          {ACTIVITIES.map((item) => {
-            const selected = activity === item;
-            return (
-              <button
-                key={item}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => {
-                  setActivity(item);
-                }}
-                className={`min-h-[44px] rounded-lg border-2 px-4 py-2 text-sm font-semibold ${
-                  selected
-                    ? "border-accent bg-accent text-accent-ink"
-                    : "border-borderc bg-surface text-ink hover:bg-surface-muted"
-                }`}
-              >
-                {t(`activities.${item}`)}
-              </button>
-            );
-          })}
-        </div>
+        <ActivitySelector activity={activity} onSelect={setActivity} />
       </div>
 
       {plan.bestWindow && plan.worstWindow && (

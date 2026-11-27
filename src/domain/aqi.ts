@@ -1,4 +1,9 @@
-import { calculatePollutantUsAqi, POLLUTANT_KEYS } from "@/domain/aqiBreakpoints";
+// ============================================================================
+// src/domain/aqi.ts
+// Classifies dual AQI scales, WHO pollutant ratios, and winter smog severity.
+// ============================================================================
+
+import { calculatePollutantUsAqi, POLLUTANT_KEYS } from "@/domain/aqi-breakpoints";
 import { WHO_GUIDELINES_2021_UG_M3, WINTER_SMOG_THRESHOLDS } from "@/lib/constants";
 import type {
   EuropeanAqiBand,
@@ -12,6 +17,7 @@ import type {
 const ELEVATED_SMOG_US_AQI = 101;
 const ELEVATED_SMOG_PM25 = 35.5;
 const EMERGENCY_SMOG_PM25 = 125.5;
+const WHO_RATIO_PRECISION_FACTOR = 10;
 
 const EAQI_BAND_UPPER_LIMITS: ReadonlyArray<{ max: number; band: EuropeanAqiBand }> = [
   { max: 20, band: "good" },
@@ -74,27 +80,25 @@ const US_AQI_CLASSIFICATIONS: ReadonlyArray<{ max: number; meta: UsAqiClassifica
   },
 ];
 
-/**
- * Maps a numeric US AQI value to its semantic category, rank, icon, and non-color pattern.
- */
+const HAZARDOUS_CLASSIFICATION: UsAqiClassification = {
+  category: "hazardous",
+  severityRank: 6,
+  iconId: "biohazard",
+  patternId: "dense-bars",
+  tokenName: "aqi-hazardous",
+};
+
+/** Maps a numeric US AQI value to its accessible category, rank, icon, and pattern. */
 export function classifyUsAqi(usAqi: number): UsAqiClassification {
   for (const entry of US_AQI_CLASSIFICATIONS) {
     if (usAqi <= entry.max) {
       return entry.meta;
     }
   }
-  return {
-    category: "hazardous",
-    severityRank: 6,
-    iconId: "biohazard",
-    patternId: "dense-bars",
-    tokenName: "aqi-hazardous",
-  };
+  return HAZARDOUS_CLASSIFICATION;
 }
 
-/**
- * Maps a numeric European AQI (EAQI) score into its six standard EEA severity bands.
- */
+/** Maps a numeric European AQI (EAQI) score into its six standard EEA severity bands. */
 export function computeEuropeanAqiBand(eaqiValue: number): EuropeanAqiBand {
   for (const entry of EAQI_BAND_UPPER_LIMITS) {
     if (eaqiValue <= entry.max) {
@@ -104,9 +108,7 @@ export function computeEuropeanAqiBand(eaqiValue: number): EuropeanAqiBand {
   return "extremely_poor";
 }
 
-/**
- * Evaluates all six pollutants against WHO 2021 guidelines and marks the dominant driver.
- */
+/** Evaluates all six pollutants against WHO 2021 guidelines and marks the dominant driver. */
 export function assessPollutants(readings: PollutantReadings): readonly PollutantAssessment[] {
   const subIndices: Record<PollutantKey, number> = {
     pm25: calculatePollutantUsAqi("pm25", readings.pm25),
@@ -133,7 +135,9 @@ export function assessPollutants(readings: PollutantReadings): readonly Pollutan
       key,
       valueUgM3,
       whoGuidelineUgM3,
-      whoRatio: Math.round((valueUgM3 / whoGuidelineUgM3) * 10) / 10,
+      whoRatio:
+        Math.round((valueUgM3 / whoGuidelineUgM3) * WHO_RATIO_PRECISION_FACTOR) /
+        WHO_RATIO_PRECISION_FACTOR,
       exceedsWho: valueUgM3 > whoGuidelineUgM3,
       subIndexUsAqi: subIndices[key],
       isDominant: key === dominantKey,
@@ -141,9 +145,7 @@ export function assessPollutants(readings: PollutantReadings): readonly Pollutan
   });
 }
 
-/**
- * Returns the dominant pollutant key from an evaluated pollutant assessment list.
- */
+/** Returns the dominant pollutant key from an evaluated pollutant assessment list. */
 export function findDominantPollutant(assessments: readonly PollutantAssessment[]): PollutantKey {
   const dominant = assessments.find((item) => item.isDominant);
   return dominant ? dominant.key : "pm25";
@@ -176,9 +178,7 @@ function resolveSmogSeverity(
   return "none";
 }
 
-/**
- * Detects severe winter smog and urban inversion episodes from AQI and particulate/NO2 drivers.
- */
+/** Detects severe winter smog and urban inversion episodes from AQI and particulate/NO2 drivers. */
 export function assessWinterSmog(usAqi: number, readings: PollutantReadings): SmogAssessment {
   const severity = resolveSmogSeverity(usAqi, readings);
   const inversionTrapLikely =

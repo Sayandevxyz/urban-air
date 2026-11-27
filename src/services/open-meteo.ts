@@ -1,3 +1,8 @@
+// ============================================================================
+// src/services/open-meteo.ts
+// Implements SWR-cached Open-Meteo geocoding and parallel AQI providers.
+// ============================================================================
+
 import {
   AQI_CACHE_STALE_TTL_MS,
   AQI_CACHE_TTL_MS,
@@ -16,7 +21,7 @@ import {
   openMeteoGeocodeSchema,
   openMeteoHourlySchema,
   roundCoord,
-} from "@/services/openMeteoMapper";
+} from "@/services/open-meteo-mapper";
 import type { AirQualityReport, CityLocation } from "@/types/air-quality";
 import type { AirQualityProvider, GeocodingProvider } from "@/types/api";
 

@@ -1,3 +1,8 @@
+// ============================================================================
+// src/components/AlertRuleForm.tsx
+// Renders the validated form for creating local AQI and PM2.5 threshold rules.
+// ============================================================================
+
 import { useTranslations } from "next-intl";
 import { useState, type SyntheticEvent } from "react";
 import { ALERT_DEFAULT_THRESHOLD, ALERT_THRESHOLD_MAX, ALERT_THRESHOLD_MIN } from "@/lib/constants";
@@ -35,8 +40,8 @@ function SelectField({
       <select
         id={id}
         value={value}
-        onChange={(event) => {
-          onChange(event.target.value);
+        onChange={(e) => {
+          onChange(e.target.value);
         }}
         className="mt-1 min-h-[48px] w-full rounded-lg border-2 border-borderc-strong bg-surface px-3 py-2 text-base text-ink"
       >
@@ -76,8 +81,8 @@ function ThresholdField({
         value={value}
         aria-invalid={invalid}
         aria-describedby={invalid ? "alert-threshold-error" : undefined}
-        onChange={(event) => {
-          onChange(event.target.value);
+        onChange={(e) => {
+          onChange(e.target.value);
         }}
         className="mt-1 min-h-[48px] w-full rounded-lg border-2 border-borderc-strong bg-surface px-3 py-2 text-base text-ink"
       />
@@ -93,57 +98,72 @@ function ThresholdField({
   );
 }
 
-/**
- * Validated threshold alert creation form with accessible inline error announcements.
- */
-export function AlertRuleForm({ cityOptions, defaultCityKey, onAddRule }: AlertRuleFormProps) {
-  const t = useTranslations("alerts");
+function parseValidThreshold(rawValue: string): number | null {
+  const numeric = Number(rawValue);
+  if (!Number.isFinite(numeric) || numeric < ALERT_THRESHOLD_MIN || numeric > ALERT_THRESHOLD_MAX)
+    return null;
+  return Math.round(numeric);
+}
+
+function useAlertFormState({ cityOptions, defaultCityKey, onAddRule }: AlertRuleFormProps) {
   const [cityKey, setCityKey] = useState(defaultCityKey);
   const [metric, setMetric] = useState<"usAqi" | "pm25">("usAqi");
   const [thresholdRaw, setThresholdRaw] = useState(String(ALERT_DEFAULT_THRESHOLD));
-  const [validationError, setValidationError] = useState(false);
+  const [invalid, setInvalid] = useState(false);
 
+  const onChangeMetric = (val: string) => {
+    setMetric(val === "pm25" ? "pm25" : "usAqi");
+  };
+  const onChangeThreshold = (val: string) => {
+    setThresholdRaw(val);
+    setInvalid(false);
+  };
   const handleSubmit = (event: SyntheticEvent) => {
     event.preventDefault();
-    const numeric = Number(thresholdRaw);
-    const outOfRange =
-      !Number.isFinite(numeric) || numeric < ALERT_THRESHOLD_MIN || numeric > ALERT_THRESHOLD_MAX;
-    if (outOfRange) {
-      setValidationError(true);
+    const threshold = parseValidThreshold(thresholdRaw);
+    if (threshold === null) {
+      setInvalid(true);
       return;
     }
-    setValidationError(false);
+    setInvalid(false);
     const chosen = cityOptions.find((c) => c.key === cityKey) ?? cityOptions[0];
-    if (chosen) {
-      onAddRule({
-        cityKey: chosen.key,
-        cityName: chosen.name,
-        metric,
-        threshold: Math.round(numeric),
-      });
-    }
+    if (chosen) onAddRule({ cityKey: chosen.key, cityName: chosen.name, metric, threshold });
   };
 
+  return {
+    cityKey,
+    setCityKey,
+    metric,
+    onChangeMetric,
+    thresholdRaw,
+    onChangeThreshold,
+    invalid,
+    handleSubmit,
+  };
+}
+
+/** Validated threshold alert creation form with accessible inline error announcements. */
+export function AlertRuleForm(props: AlertRuleFormProps) {
+  const t = useTranslations("alerts");
+  const state = useAlertFormState(props);
   return (
     <form
-      onSubmit={handleSubmit}
+      onSubmit={state.handleSubmit}
       noValidate
       className="mt-4 grid gap-4 sm:grid-cols-4 sm:items-end"
     >
       <SelectField
         id="alert-city-select"
         label={t("cityLabel")}
-        value={cityKey}
-        onChange={setCityKey}
-        options={cityOptions.map((c) => ({ value: c.key, label: c.name }))}
+        value={state.cityKey}
+        onChange={state.setCityKey}
+        options={props.cityOptions.map((c) => ({ value: c.key, label: c.name }))}
       />
       <SelectField
         id="alert-metric-select"
         label={t("metricLabel")}
-        value={metric}
-        onChange={(val) => {
-          setMetric(val === "pm25" ? "pm25" : "usAqi");
-        }}
+        value={state.metric}
+        onChange={state.onChangeMetric}
         options={[
           { value: "usAqi", label: t("metricUsAqi") },
           { value: "pm25", label: t("metricPm25") },
@@ -151,13 +171,10 @@ export function AlertRuleForm({ cityOptions, defaultCityKey, onAddRule }: AlertR
       />
       <ThresholdField
         label={t("thresholdLabel")}
-        value={thresholdRaw}
+        value={state.thresholdRaw}
         errorText={t("thresholdError")}
-        invalid={validationError}
-        onChange={(val) => {
-          setThresholdRaw(val);
-          setValidationError(false);
-        }}
+        invalid={state.invalid}
+        onChange={state.onChangeThreshold}
       />
       <button
         type="submit"

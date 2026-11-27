@@ -1,9 +1,13 @@
+// ============================================================================
+// src/services/rate-limit.ts
+// Implements in-memory token-bucket rate limiting and trusted IP extraction.
+// ============================================================================
+
+import { HTTP_STATUS } from "@/lib/constants";
 import { getEnv } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 
-/**
- * Outcome returned by a rate limiter consume check.
- */
+/** Outcome returned by a rate limiter consume check. */
 export interface RateLimitDecision {
   readonly allowed: boolean;
   readonly remaining: number;
@@ -11,9 +15,7 @@ export interface RateLimitDecision {
   readonly retryAfterSeconds: number;
 }
 
-/**
- * Rate limiter contract enabling seamless swap between in-memory and Redis implementations.
- */
+/** Rate limiter contract enabling seamless swap between in-memory and distributed stores. */
 export interface RateLimiter {
   consume(key: string): Promise<RateLimitDecision>;
 }
@@ -24,10 +26,13 @@ interface TokenBucketState {
 }
 
 const MAX_BUCKET_ENTRIES = 10_000;
+const MIN_WINDOW_MS = 1_000;
+const MS_PER_SECOND = 1_000;
+const MAX_IPV4_OCTET_DIGITS = 3;
+const MAX_IPV4_OCTET_VALUE = 255;
+const MAX_IP_LENGTH = 45;
 
-/**
- * In-memory token bucket rate limiter keyed by client IP address.
- */
+/** In-memory token bucket rate limiter keyed by client IP address. */
 export class InMemoryTokenBucketRateLimiter implements RateLimiter {
   private readonly buckets = new Map<string, TokenBucketState>();
   private readonly capacity: number;
@@ -36,9 +41,7 @@ export class InMemoryTokenBucketRateLimiter implements RateLimiter {
   private readonly maxBuckets: number;
   private readonly now: () => number;
 
-  /**
-   * Configures token capacity and refill rate across the specified rolling window.
-   */
+  /** Configures token capacity and refill rate across the specified rolling window. */
   public constructor(options: {
     maxRequests: number;
     windowMs: number;
@@ -46,15 +49,13 @@ export class InMemoryTokenBucketRateLimiter implements RateLimiter {
     now?: () => number;
   }) {
     this.capacity = Math.max(1, options.maxRequests);
-    this.windowMs = Math.max(1_000, options.windowMs);
+    this.windowMs = Math.max(MIN_WINDOW_MS, options.windowMs);
     this.maxBuckets = Math.max(1, options.maxBuckets ?? MAX_BUCKET_ENTRIES);
     this.refillRatePerMs = this.capacity / this.windowMs;
     this.now = options.now ?? (() => Date.now());
   }
 
-  /**
-   * Consumes one token for the given key or returns retry timing when bucket is exhausted.
-   */
+  /** Consumes one token for the given key or returns retry timing when exhausted. */
   public consume(key: string): Promise<RateLimitDecision> {
     const currentTime = this.now();
     const bucket = this.getOrCreateBucket(key, currentTime);
@@ -74,7 +75,10 @@ export class InMemoryTokenBucketRateLimiter implements RateLimiter {
     }
 
     const deficit = 1 - bucket.tokens;
-    const retryAfterSeconds = Math.max(1, Math.ceil(deficit / (this.refillRatePerMs * 1_000)));
+    const retryAfterSeconds = Math.max(
+      1,
+      Math.ceil(deficit / (this.refillRatePerMs * MS_PER_SECOND)),
+    );
     return Promise.resolve({
       allowed: false,
       remaining: 0,
@@ -83,9 +87,7 @@ export class InMemoryTokenBucketRateLimiter implements RateLimiter {
     });
   }
 
-  /**
-   * Clears all tracked client buckets (for tests).
-   */
+  /** Clears all tracked client buckets (for tests). */
   public reset(): void {
     this.buckets.clear();
   }
@@ -127,24 +129,20 @@ const IPV6_PATTERN = /^[0-9a-fA-F:]{2,45}$/;
 function isValidIpv4(ip: string): boolean {
   if (!IPV4_SEGMENT_PATTERN.test(ip)) return false;
   return ip.split(".").every((part) => {
-    if (part.length > 3) return false;
+    if (part.length > MAX_IPV4_OCTET_DIGITS) return false;
     const value = Number(part);
-    return Number.isInteger(value) && value >= 0 && value <= 255;
+    return Number.isInteger(value) && value >= 0 && value <= MAX_IPV4_OCTET_VALUE;
   });
 }
 
-/**
- * Validates IPv4 or IPv6 syntax before keying a client rate-limit bucket.
- */
+/** Validates IPv4 or IPv6 syntax before keying a client rate-limit bucket. */
 export function isValidIpAddress(candidate: string): boolean {
-  if (candidate.length === 0 || candidate.length > 45) return false;
+  if (candidate.length === 0 || candidate.length > MAX_IP_LENGTH) return false;
   if (isValidIpv4(candidate)) return true;
   return candidate.includes(":") && IPV6_PATTERN.test(candidate);
 }
 
-/**
- * Extracts a validated client identifier only when TRUST_PROXY=true, resisting X-Forwarded-For spoofing.
- */
+/** Extracts a validated client IP only when TRUST_PROXY=true, resisting spoofing. */
 export function extractClientIp(
   headers: Headers,
   trustProxy = getEnv().TRUST_PROXY === "true",
@@ -164,9 +162,7 @@ export function extractClientIp(
   return "127.0.0.1";
 }
 
-/**
- * Enforces a rate limit check and throws a typed 429 AppError if exceeded.
- */
+/** Enforces a rate limit check and throws a typed 429 AppError if exceeded. */
 export async function enforceRateLimit(
   limiter: RateLimiter,
   headers: Headers,
@@ -178,7 +174,7 @@ export async function enforceRateLimit(
     throw new AppError(
       "RATE_LIMITED",
       `Too many requests. Please retry in ${decision.retryAfterSeconds} seconds.`,
-      429,
+      HTTP_STATUS.TOO_MANY_REQUESTS,
       { retryAfterSeconds: decision.retryAfterSeconds },
     );
   }

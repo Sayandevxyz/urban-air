@@ -1,3 +1,8 @@
+// ============================================================================
+// src/components/AqiDashboard.tsx
+// Displays severe winter smog alerts, dual AQI scales, and WHO pollutant grid.
+// ============================================================================
+
 "use client";
 
 import { useTranslations } from "next-intl";
@@ -16,8 +21,15 @@ import type {
   SmogAssessment,
 } from "@/types/air-quality";
 
+const MIN_WHO_BAR_PERCENT = 8;
+const WHO_BAR_PERCENT_PER_RATIO = 25;
+const WHO_BAR_HEIGHT = 10;
+const WHO_BAR_CORNER_RADIUS = 5;
+
 function SmogAlertBanner({ smog }: { readonly smog: SmogAssessment }) {
-  const tDash = useTranslations("dashboard");
+  const t = useTranslations("dashboard");
+  const titleKey =
+    smog.severity === "smog_emergency" ? "smogAlertEmergencyTitle" : "smogAlertSevereTitle";
   return (
     <div
       role="alert"
@@ -26,14 +38,10 @@ function SmogAlertBanner({ smog }: { readonly smog: SmogAssessment }) {
       <div className="flex items-start gap-3">
         <AqiSeverityIcon iconId="smog-danger" className="mt-0.5 h-6 w-6 shrink-0" />
         <div>
-          <h2 className="text-lg font-bold">
-            {smog.severity === "smog_emergency"
-              ? tDash("smogAlertEmergencyTitle")
-              : tDash("smogAlertSevereTitle")}
-          </h2>
-          <p className="mt-1 text-sm">{tDash("smogAlertBody")}</p>
+          <h2 className="text-lg font-bold">{t(titleKey)}</h2>
+          <p className="mt-1 text-sm">{t("smogAlertBody")}</p>
           {smog.inversionTrapLikely && (
-            <p className="mt-1 text-sm font-semibold">{tDash("inversionNote")}</p>
+            <p className="mt-1 text-sm font-semibold">{t("inversionNote")}</p>
           )}
         </div>
       </div>
@@ -42,16 +50,14 @@ function SmogAlertBanner({ smog }: { readonly smog: SmogAssessment }) {
 }
 
 function AqiScaleCards({ report }: { readonly report: AirQualityReport }) {
-  const tDash = useTranslations("dashboard");
+  const t = useTranslations("dashboard");
   const usMeta = classifyUsAqi(report.current.usAqi);
-  const euBand = computeEuropeanAqiBand(report.current.europeanAqi);
   const visual = AQI_VISUAL_STYLES[usMeta.category];
-
   return (
     <div className="mt-5 grid gap-4 md:grid-cols-2">
       <div className={`rounded-xl border-2 p-5 ${visual.cardClass}`}>
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-bold uppercase tracking-wide">{tDash("usAqiLabel")}</span>
+          <span className="text-sm font-bold uppercase tracking-wide">{t("usAqiLabel")}</span>
           <span
             className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${visual.badgeClass}`}
           >
@@ -62,25 +68,32 @@ function AqiScaleCards({ report }: { readonly report: AirQualityReport }) {
         <p className="mt-3 text-4xl font-extrabold tabular-nums">{report.current.usAqi}</p>
         <p className="mt-1 flex items-center gap-2 text-base font-bold">
           <AqiSeverityIcon iconId={usMeta.iconId} className="h-5 w-5 shrink-0" />
-          <span>{tDash(`categories.${usMeta.category}`)}</span>
+          <span>{t(`categories.${usMeta.category}`)}</span>
         </p>
       </div>
-
       <div className="rounded-xl border-2 border-borderc bg-surface p-5 text-ink">
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm font-bold uppercase tracking-wide text-ink-muted">
-            {tDash("euAqiLabel")}
+            {t("euAqiLabel")}
           </span>
           <span className="rounded-full border border-borderc px-3 py-1 text-xs font-bold text-ink">
             EAQI
           </span>
         </div>
         <p className="mt-3 text-4xl font-extrabold tabular-nums">{report.current.europeanAqi}</p>
-        <p className="mt-1 text-base font-bold text-ink">{tDash(`euBands.${euBand}`)}</p>
+        <p className="mt-1 text-base font-bold text-ink">
+          {t(`euBands.${computeEuropeanAqiBand(report.current.europeanAqi)}`)}
+        </p>
       </div>
     </div>
   );
 }
+
+const SOURCE_KEY_BY_NAME = {
+  demo: "sourceDemo",
+  cached: "sourceCached",
+  "open-meteo": "sourceOpenMeteo",
+} as const;
 
 function AqiHeadlineCard({
   report,
@@ -91,13 +104,7 @@ function AqiHeadlineCard({
 }) {
   const tDash = useTranslations("dashboard");
   const tPol = useTranslations("pollutants");
-  const sourceLabel =
-    report.source === "demo"
-      ? tDash("sourceDemo")
-      : report.source === "cached"
-        ? tDash("sourceCached")
-        : tDash("sourceOpenMeteo");
-
+  const srcKey = SOURCE_KEY_BY_NAME[report.source];
   return (
     <div className="rounded-xl border border-borderc bg-surface-elevated p-4 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -107,7 +114,7 @@ function AqiHeadlineCard({
             {report.location.country ? `, ${report.location.country}` : ""}
           </h2>
           <p className="mt-1 text-sm text-ink-muted">
-            {tDash("updatedAt")}: {report.updatedAtIso} · {sourceLabel}
+            {tDash("updatedAt")}: {report.updatedAtIso} · {tDash(srcKey)}
           </p>
         </div>
         <span className="inline-flex items-center rounded-full border border-borderc bg-surface px-3 py-1 text-sm font-semibold text-ink">
@@ -119,18 +126,35 @@ function AqiHeadlineCard({
   );
 }
 
+const BAR_BASE = "mt-2 h-2.5 w-full overflow-hidden rounded-full bg-surface-muted";
+const BAR_FAIL = "fill-rose-700 dark:fill-rose-400";
+const BAR_OK = "fill-emerald-700 dark:fill-emerald-400";
+const CARD_WARN = "border-amber-700 bg-amber-50/40 dark:border-amber-400 dark:bg-amber-950/30";
+const CARD_OK = "border-borderc bg-surface";
+
+function PollutantWhoBar({ item }: { readonly item: PollutantAssessment }) {
+  const w = Math.max(
+    MIN_WHO_BAR_PERCENT,
+    Math.min(100, Math.round(item.whoRatio * WHO_BAR_PERCENT_PER_RATIO)),
+  );
+  return (
+    <svg viewBox="0 0 100 10" preserveAspectRatio="none" className={BAR_BASE} aria-hidden="true">
+      <rect
+        x={0}
+        y={0}
+        width={w}
+        height={WHO_BAR_HEIGHT}
+        rx={WHO_BAR_CORNER_RADIUS}
+        className={item.exceedsWho ? BAR_FAIL : BAR_OK}
+      />
+    </svg>
+  );
+}
+
 function PollutantCard({ item }: { readonly item: PollutantAssessment }) {
   const tPol = useTranslations("pollutants");
-  const fillPct = Math.max(8, Math.min(100, Math.round(item.whoRatio * 25)));
-  const cardTone = item.exceedsWho
-    ? "border-amber-700 bg-amber-50/40 dark:border-amber-400 dark:bg-amber-950/30"
-    : "border-borderc bg-surface";
-  const barTone = item.exceedsWho
-    ? "fill-rose-700 dark:fill-rose-400"
-    : "fill-emerald-700 dark:fill-emerald-400";
-
   return (
-    <li className={`rounded-lg border p-4 ${cardTone}`}>
+    <li className={`rounded-lg border p-4 ${item.exceedsWho ? CARD_WARN : CARD_OK}`}>
       <div className="flex items-start justify-between gap-2">
         <h4 className="text-base font-bold text-ink">{tPol(`items.${item.key}.name`)}</h4>
         <span className="shrink-0 text-base font-extrabold tabular-nums text-ink">
@@ -141,16 +165,9 @@ function PollutantCard({ item }: { readonly item: PollutantAssessment }) {
         {tPol("whoLimitLabel", { limit: item.whoGuidelineUgM3 })} ·{" "}
         <span className="font-bold text-ink">{tPol("whoRatioText", { ratio: item.whoRatio })}</span>
       </p>
-      <svg
-        viewBox="0 0 100 10"
-        preserveAspectRatio="none"
-        className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-surface-muted"
-        aria-hidden="true"
-      >
-        <rect x={0} y={0} width={fillPct} height={10} rx={5} className={barTone} />
-      </svg>
+      <PollutantWhoBar item={item} />
       <p className="mt-2 text-xs font-bold text-ink">
-        {item.exceedsWho ? tPol("exceedsWho") : tPol("withinWho")}
+        {tPol(item.exceedsWho ? "exceedsWho" : "withinWho")}
       </p>
       <p className="mt-1 text-sm text-ink-muted">{tPol(`items.${item.key}.shortDesc`)}</p>
       <p className="mt-1 text-xs text-ink-muted">{tPol(`items.${item.key}.sources`)}</p>
@@ -158,34 +175,25 @@ function PollutantCard({ item }: { readonly item: PollutantAssessment }) {
   );
 }
 
-function PollutantGrid({ assessments }: { readonly assessments: readonly PollutantAssessment[] }) {
-  const tPol = useTranslations("pollutants");
-  return (
-    <div className="rounded-xl border border-borderc bg-surface-elevated p-4 shadow-sm sm:p-6">
-      <h3 className="text-lg font-bold text-ink">{tPol("sectionTitle")}</h3>
-      <p className="mt-1 text-sm text-ink-muted">{tPol("sectionDesc")}</p>
-      <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {assessments.map((item) => (
-          <PollutantCard key={item.key} item={item} />
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-/**
- * Live AQI dashboard presenting severe winter smog alerts, dual AQI scales, and WHO pollutants.
- */
+/** Live AQI dashboard presenting severe winter smog alerts, dual AQI scales, and WHO pollutants. */
 export function AqiDashboard({ report }: { readonly report: AirQualityReport }) {
+  const tPol = useTranslations("pollutants");
   const assessments = assessPollutants(report.current.readings);
   const dominant = findDominantPollutant(assessments);
   const smog = assessWinterSmog(report.current.usAqi, report.current.readings);
-
   return (
     <section id="dashboard" className="space-y-5" aria-live="polite">
       {smog.isWinterSmogAlert && <SmogAlertBanner smog={smog} />}
       <AqiHeadlineCard report={report} dominant={dominant} />
-      <PollutantGrid assessments={assessments} />
+      <div className="rounded-xl border border-borderc bg-surface-elevated p-4 shadow-sm sm:p-6">
+        <h3 className="text-lg font-bold text-ink">{tPol("sectionTitle")}</h3>
+        <p className="mt-1 text-sm text-ink-muted">{tPol("sectionDesc")}</p>
+        <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {assessments.map((item) => (
+            <PollutantCard key={item.key} item={item} />
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }

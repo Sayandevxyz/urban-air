@@ -1,3 +1,8 @@
+// ============================================================================
+// src/hooks/useCitySearch.ts
+// Implements debounced city autocomplete with cancellation and rate-limit state.
+// ============================================================================
+
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";

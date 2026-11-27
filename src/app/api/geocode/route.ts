@@ -1,3 +1,8 @@
+// ============================================================================
+// src/app/api/geocode/route.ts
+// Serves city autocomplete suggestions via Demo Mode or Open-Meteo geocoding.
+// ============================================================================
+
 import type { NextResponse } from "next/server";
 import { ok } from "@/lib/errors";
 import { logger } from "@/lib/logger";

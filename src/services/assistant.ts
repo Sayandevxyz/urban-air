@@ -1,3 +1,8 @@
+// ============================================================================
+// src/services/assistant.ts
+// Orchestrates prompt-injection defense, grounded LLM calls, and fallbacks.
+// ============================================================================
+
 import { z } from "zod";
 import { LLM_TIMEOUT_MS, MAX_LLM_OUTPUT_TOKENS } from "@/lib/constants";
 import { getEnv, type ValidatedEnv } from "@/lib/env";
@@ -15,7 +20,7 @@ import {
   REFUSAL_MESSAGES,
   sanitizeAssistantOutput,
   sanitizeUserPrompt,
-} from "@/services/assistantSanitize";
+} from "@/services/assistant-sanitize";
 import { fetchJsonWithGuard } from "@/services/http";
 import type { ChatRequestPayload } from "@/services/schemas";
 import type { AssistantResponsePayload } from "@/types/api";

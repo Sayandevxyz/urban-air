@@ -1,17 +1,29 @@
+// ============================================================================
+// src/hooks/useAirQualityData.ts
+// Manages active city selection, AQI report fetching, offline cache, and geo.
+// ============================================================================
+
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAsyncResource } from "@/hooks/useAsyncResource";
-import { useGeolocation } from "@/hooks/useGeolocation";
 import { fetchAirQuality, readCachedSnapshot } from "@/lib/api-client";
+import { COORDINATE_ROUND_FACTOR, GEO_MAX_AGE_MS, GEO_TIMEOUT_MS } from "@/lib/constants";
 import { getDemoAirQualityReport, getDemoCityLocations } from "@/services/demo-data";
 import type { AirQualityReport, CityLocation } from "@/types/air-quality";
 import type { LoadState } from "@/types/api";
+
+/** Status key surfaced alongside city search for geolocation permission feedback. */
+export type GeoStatusKey = "none" | "locating" | "locationDenied" | "locationUnavailable";
 
 interface LoadOutcome {
   readonly loadState: LoadState;
   readonly report?: AirQualityReport;
   readonly retryAfterSeconds?: number;
+}
+
+function roundCoord(value: number): number {
+  return Math.round(value * COORDINATE_ROUND_FACTOR) / COORDINATE_ROUND_FACTOR;
 }
 
 function resolveFallbackOutcome(location: CityLocation, requireSameCity: boolean): LoadOutcome {
@@ -48,6 +60,45 @@ function applyLoadOutcome(
   if (outcome.report) setReport(outcome.report);
   if (outcome.retryAfterSeconds !== undefined) setRetryAfterSeconds(outcome.retryAfterSeconds);
   setLoadState(outcome.loadState);
+}
+
+function useGeolocation(onLocated: (city: CityLocation) => void) {
+  const [geoStatusMessageKey, setGeoStatusMessageKey] = useState<GeoStatusKey>("none");
+  const clearGeoMessage = useCallback(() => {
+    setGeoStatusMessageKey("none");
+  }, []);
+
+  const requestUserLocation = useCallback(() => {
+    const geo: Partial<Geolocation> | undefined =
+      typeof navigator !== "undefined" ? navigator.geolocation : undefined;
+    if (typeof geo?.getCurrentPosition !== "function") {
+      setGeoStatusMessageKey("locationUnavailable");
+      return;
+    }
+    setGeoStatusMessageKey("locating");
+    geo.getCurrentPosition(
+      (position) => {
+        setGeoStatusMessageKey("none");
+        onLocated({
+          key: "geo-self-current",
+          name: "Current Location",
+          region: "",
+          country: "",
+          latitude: roundCoord(position.coords.latitude),
+          longitude: roundCoord(position.coords.longitude),
+          timezone: "auto",
+        });
+      },
+      (geoError) => {
+        setGeoStatusMessageKey(
+          geoError.code === geoError.PERMISSION_DENIED ? "locationDenied" : "locationUnavailable",
+        );
+      },
+      { enableHighAccuracy: false, timeout: GEO_TIMEOUT_MS, maximumAge: GEO_MAX_AGE_MS },
+    );
+  }, [onLocated]);
+
+  return { geoStatusMessageKey, requestUserLocation, clearGeoMessage };
 }
 
 function useAirQualityLoader(initialDemoMode: boolean) {
@@ -110,15 +161,12 @@ function useAutoLoadEffect(
   }, [demoMode, loadForLocation, selectedCity, setLoadState]);
 }
 
-/**
- * Orchestrates live or demo air quality report loading, offline snapshot fallback, and geolocation.
- */
+/** Orchestrates live or demo AQI report loading, offline snapshot fallback, and geolocation. */
 export function useAirQualityData(initialDemoMode: boolean) {
   const [demoMode, setDemoMode] = useState(initialDemoMode);
   const loader = useAirQualityLoader(initialDemoMode);
   const { selectedCity, setSelectedCity, loadForLocation } = loader;
   useAutoLoadEffect(loader, demoMode, initialDemoMode);
-
   const { geoStatusMessageKey, requestUserLocation, clearGeoMessage } =
     useGeolocation(setSelectedCity);
 

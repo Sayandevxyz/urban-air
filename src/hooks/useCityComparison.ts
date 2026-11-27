@@ -1,3 +1,8 @@
+// ============================================================================
+// src/hooks/useCityComparison.ts
+// Manages parallel report fetching for up to three compared cities.
+// ============================================================================
+
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";

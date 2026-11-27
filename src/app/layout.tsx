@@ -1,15 +1,22 @@
+// ============================================================================
+// src/app/layout.tsx
+// Defines the root HTML document shell, metadata, and localization provider.
+// ============================================================================
+
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
 import { AppLocaleProvider } from "@/components/LocaleContext";
 import "./globals.css";
 
+/** Next.js page metadata describing the Urban Air Quality Assistant. */
 export const metadata: Metadata = {
   title: "Urban Air Quality Assistant | Smog Navigation & Clean Routines",
   description:
     "Check live US and European AQI, severe winter smog alerts, personalized family health advice, indoor air hacks, sustainable routines, and grounded AI guidance.",
 };
 
+/** Next.js responsive viewport settings permitting user zoom for accessibility. */
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,

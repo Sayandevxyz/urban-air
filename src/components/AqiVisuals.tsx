@@ -1,6 +1,12 @@
+// ============================================================================
+// src/components/AqiVisuals.tsx
+// Maps AQI severity tiers to accessible colors, icons, and non-color badges.
+// ============================================================================
+
 import type { ReactNode } from "react";
 import type { AqiCategory, UsAqiClassification } from "@/types/air-quality";
 
+/** Tailwind class and pattern metadata pairing non-color icons with high-contrast themes. */
 export interface AqiVisualStyle {
   readonly cardClass: string;
   readonly badgeClass: string;

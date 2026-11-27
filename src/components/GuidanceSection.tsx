@@ -1,8 +1,14 @@
+// ============================================================================
+// src/components/GuidanceSection.tsx
+// Renders resident profile controls, personalized protection advice, and hacks.
+// ============================================================================
+
 "use client";
 
 import { useTranslations } from "next-intl";
 import { assessWinterSmog } from "@/domain/aqi";
 import { buildIndoorAirHacks, buildPersonaGuidance } from "@/domain/guidance";
+import { ISO_SLICE } from "@/lib/constants";
 import type { AirQualityReport } from "@/types/air-quality";
 import type {
   CommuteMode,
@@ -27,51 +33,33 @@ const COMMUTES: readonly CommuteMode[] = ["car", "transit", "two_wheeler", "walk
 const ENERGIES: readonly HomeEnergyMode[] = ["gas_biomass", "electric_induction"];
 const FILTRATIONS: readonly FiltrationMode[] = ["none", "hepa", "diy_box_fan"];
 
+const f = <K extends keyof ResidentProfile, O extends string>(
+  key: K,
+  id: string,
+  options: readonly O[],
+  meta: readonly [string, string],
+) => ({ key, id, options, label: meta[0], prefix: meta[1] });
+
 const PROFILE_FIELDS = [
-  {
-    key: "persona",
-    id: "persona-select",
-    label: "personaLabel",
-    options: PERSONAS,
-    prefix: "personas",
-  },
-  {
-    key: "commuteMode",
-    id: "commute-select",
-    label: "commuteLabel",
-    options: COMMUTES,
-    prefix: "commutes",
-  },
-  {
-    key: "homeEnergyMode",
-    id: "energy-select",
-    label: "energyLabel",
-    options: ENERGIES,
-    prefix: "energies",
-  },
-  {
-    key: "filtrationMode",
-    id: "filtration-select",
-    label: "filtrationLabel",
-    options: FILTRATIONS,
-    prefix: "filtrations",
-  },
+  f("persona", "persona-select", PERSONAS, ["personaLabel", "personas"]),
+  f("commuteMode", "commute-select", COMMUTES, ["commuteLabel", "commutes"]),
+  f("homeEnergyMode", "energy-select", ENERGIES, ["energyLabel", "energies"]),
+  f("filtrationMode", "filtration-select", FILTRATIONS, ["filtrationLabel", "filtrations"]),
 ] as const;
 
+const pickOpt = <T extends string>(opts: readonly T[], val: string, cur: T): T =>
+  opts.find((v) => v === val) ?? cur;
+
 function applyProfileSelection(
-  profile: ResidentProfile,
-  key: keyof ResidentProfile,
-  value: string,
+  p: ResidentProfile,
+  k: keyof ResidentProfile,
+  v: string,
 ): ResidentProfile {
-  const persona = key === "persona" ? PERSONAS.find((item) => item === value) : undefined;
-  if (persona) return { ...profile, persona };
-  const commute = key === "commuteMode" ? COMMUTES.find((item) => item === value) : undefined;
-  if (commute) return { ...profile, commuteMode: commute };
-  const energy = key === "homeEnergyMode" ? ENERGIES.find((item) => item === value) : undefined;
-  if (energy) return { ...profile, homeEnergyMode: energy };
-  const filtration =
-    key === "filtrationMode" ? FILTRATIONS.find((item) => item === value) : undefined;
-  return filtration ? { ...profile, filtrationMode: filtration } : profile;
+  if (k === "persona") return { ...p, persona: pickOpt(PERSONAS, v, p.persona) };
+  if (k === "commuteMode") return { ...p, commuteMode: pickOpt(COMMUTES, v, p.commuteMode) };
+  if (k === "homeEnergyMode")
+    return { ...p, homeEnergyMode: pickOpt(ENERGIES, v, p.homeEnergyMode) };
+  return { ...p, filtrationMode: pickOpt(FILTRATIONS, v, p.filtrationMode) };
 }
 
 function PersonaPicker({
@@ -113,36 +101,32 @@ function PersonaPicker({
   );
 }
 
-function AdviceList({
-  guidance,
-  hacks,
-}: {
-  readonly guidance: PersonaGuidance;
-  readonly hacks: readonly IndoorAirHack[];
-}) {
+function GuidanceSummaryCards({ guidance }: { readonly guidance: PersonaGuidance }) {
   const t = useTranslations("guidance");
+  const cards = [
+    { title: t("maskCardTitle"), body: t(`maskAdvice.${guidance.maskAdvice}`) },
+    {
+      title: t("windowsCardTitle"),
+      body: t(`windowsAdvice.${guidance.windowsAdvice}`),
+      note: guidance.recommendedWindowIso
+        ? t("cleanestWindowNote", {
+            time: guidance.recommendedWindowIso.slice(ISO_SLICE.hourStart, ISO_SLICE.minuteEnd),
+          })
+        : undefined,
+    },
+    { title: t("outdoorCardTitle"), body: t(`outdoorAdvice.${guidance.outdoorAdvice}`) },
+  ];
   return (
     <>
       <div className="mt-5 grid gap-4 md:grid-cols-3" aria-live="polite">
-        <div className="rounded-lg border border-borderc bg-surface p-4">
-          <h3 className="text-base font-bold text-ink">{t("maskCardTitle")}</h3>
-          <p className="mt-2 text-sm text-ink">{t(`maskAdvice.${guidance.maskAdvice}`)}</p>
-        </div>
-        <div className="rounded-lg border border-borderc bg-surface p-4">
-          <h3 className="text-base font-bold text-ink">{t("windowsCardTitle")}</h3>
-          <p className="mt-2 text-sm text-ink">{t(`windowsAdvice.${guidance.windowsAdvice}`)}</p>
-          {guidance.recommendedWindowIso && (
-            <p className="mt-2 text-xs font-semibold text-ink-muted">
-              {t("cleanestWindowNote", { time: guidance.recommendedWindowIso.slice(11, 16) })}
-            </p>
-          )}
-        </div>
-        <div className="rounded-lg border border-borderc bg-surface p-4">
-          <h3 className="text-base font-bold text-ink">{t("outdoorCardTitle")}</h3>
-          <p className="mt-2 text-sm text-ink">{t(`outdoorAdvice.${guidance.outdoorAdvice}`)}</p>
-        </div>
+        {cards.map((card) => (
+          <div key={card.title} className="rounded-lg border border-borderc bg-surface p-4">
+            <h3 className="text-base font-bold text-ink">{card.title}</h3>
+            <p className="mt-2 text-sm text-ink">{card.body}</p>
+            {card.note && <p className="mt-2 text-xs font-semibold text-ink-muted">{card.note}</p>}
+          </div>
+        ))}
       </div>
-
       <div className="mt-5 rounded-lg border border-borderc bg-surface p-4">
         <h3 className="text-base font-bold text-ink">{t("checklistTitle")}</h3>
         <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-ink">
@@ -151,30 +135,33 @@ function AdviceList({
           ))}
         </ul>
       </div>
-
-      <div className="mt-6">
-        <h3 className="text-lg font-bold text-ink">{t("indoorHacksTitle")}</h3>
-        <ul className="mt-3 grid gap-4 sm:grid-cols-2">
-          {hacks.map((hack) => (
-            <li key={hack.id} className="rounded-lg border border-borderc bg-surface p-4">
-              <div className="flex items-start justify-between gap-2">
-                <h4 className="text-base font-bold text-ink">{t(`hacks.${hack.id}.title`)}</h4>
-                <span className="shrink-0 rounded-full border border-borderc-strong px-2.5 py-0.5 text-xs font-bold text-ink">
-                  {t(`priorityLabels.${hack.priority}`)}
-                </span>
-              </div>
-              <p className="mt-2 text-sm text-ink-muted">{t(`hacks.${hack.id}.desc`)}</p>
-            </li>
-          ))}
-        </ul>
-      </div>
     </>
   );
 }
 
-/**
- * Renders personalized household guidance (mask, windows, activity) and contextual indoor air hacks.
- */
+function IndoorHacksList({ hacks }: { readonly hacks: readonly IndoorAirHack[] }) {
+  const t = useTranslations("guidance");
+  return (
+    <div className="mt-6">
+      <h3 className="text-lg font-bold text-ink">{t("indoorHacksTitle")}</h3>
+      <ul className="mt-3 grid gap-4 sm:grid-cols-2">
+        {hacks.map((hack) => (
+          <li key={hack.id} className="rounded-lg border border-borderc bg-surface p-4">
+            <div className="flex items-start justify-between gap-2">
+              <h4 className="text-base font-bold text-ink">{t(`hacks.${hack.id}.title`)}</h4>
+              <span className="shrink-0 rounded-full border border-borderc-strong px-2.5 py-0.5 text-xs font-bold text-ink">
+                {t(`priorityLabels.${hack.priority}`)}
+              </span>
+            </div>
+            <p className="mt-2 text-sm text-ink-muted">{t(`hacks.${hack.id}.desc`)}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Renders personalized household guidance (mask, windows, activity) and indoor air hacks. */
 export function GuidanceSection({
   report,
   profile,
@@ -204,7 +191,8 @@ export function GuidanceSection({
         {t("sectionTitle")}
       </h2>
       <PersonaPicker profile={profile} onChangeProfile={onChangeProfile} />
-      <AdviceList guidance={guidance} hacks={hacks} />
+      <GuidanceSummaryCards guidance={guidance} />
+      <IndoorHacksList hacks={hacks} />
     </section>
   );
 }

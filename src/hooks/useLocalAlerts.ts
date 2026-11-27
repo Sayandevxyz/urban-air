@@ -1,3 +1,8 @@
+// ============================================================================
+// src/hooks/useLocalAlerts.ts
+// Stores local alert threshold rules and evaluates active warnings in memory.
+// ============================================================================
+
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -8,6 +13,7 @@ import type { AirQualityReport } from "@/types/air-quality";
 import type { ThresholdAlertRule, TriggeredAlert } from "@/types/guidance";
 
 const ALERTS_STORAGE_KEY = "urban-air:alerts:v1";
+const RULE_ID_RANDOM_SPAN = 1_000;
 
 const DEFAULT_RULES: readonly ThresholdAlertRule[] = [
   {
@@ -70,7 +76,7 @@ export function useLocalAlerts(reportsByCityKey: Readonly<Record<string, AirQual
 
   const addRule = useCallback(
     (input: { cityKey: string; cityName: string; metric: "usAqi" | "pm25"; threshold: number }) => {
-      const id = `rule-${Date.now()}-${Math.round(Math.random() * 1000)}`;
+      const id = `rule-${Date.now()}-${Math.round(Math.random() * RULE_ID_RANDOM_SPAN)}`;
       setRules((prev) => [...prev, { ...input, id, enabled: true }]);
     },
     [],

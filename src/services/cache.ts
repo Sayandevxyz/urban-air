@@ -1,3 +1,8 @@
+// ============================================================================
+// src/services/cache.ts
+// Implements a bounded in-memory SWR cache with in-flight deduplication.
+// ============================================================================
+
 import { MAX_CACHE_ENTRIES } from "@/lib/constants";
 import { logger } from "@/lib/logger";
 import type { CachePolicy } from "@/types/api";

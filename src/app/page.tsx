@@ -1,3 +1,8 @@
+// ============================================================================
+// src/app/page.tsx
+// Entry Server Component hydrating the interactive air-quality workbench.
+// ============================================================================
+
 import { UrbanAirWorkbench } from "@/components/UrbanAirWorkbench";
 import { getEnv } from "@/lib/env";
 

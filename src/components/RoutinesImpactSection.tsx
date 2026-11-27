@@ -1,3 +1,8 @@
+// ============================================================================
+// src/components/RoutinesImpactSection.tsx
+// Combines tailored low-emission routines with the direct impact simulator.
+// ============================================================================
+
 "use client";
 
 import { useTranslations } from "next-intl";

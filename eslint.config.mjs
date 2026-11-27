@@ -1,3 +1,8 @@
+// ============================================================================
+// eslint.config.mjs
+// Enforces uniform strict ESLint, complexity, file size, and security rules.
+// ============================================================================
+
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { FlatCompat } from "@eslint/eslintrc";
@@ -38,7 +43,7 @@ const eslintConfig = tseslint.config(
         "error",
         {
           "ts-ignore": true,
-          "ts-expect-error": "allow-with-description",
+          "ts-expect-error": true,
           "ts-nocheck": true,
         },
       ],
@@ -56,11 +61,11 @@ const eslintConfig = tseslint.config(
         { allowNumber: true, allowBoolean: true },
       ],
       "no-console": "error",
-      "max-lines-per-function": ["error", { max: 40, skipBlankLines: true, skipComments: true }],
+      "max-lines-per-function": ["error", { max: 45, skipBlankLines: true, skipComments: true }],
       complexity: ["error", 10],
       "max-depth": ["error", 3],
       "max-params": ["error", 4],
-      "max-lines": ["error", 250],
+      "max-lines": ["error", 200],
       "import/order": [
         "error",
         {
@@ -79,10 +84,12 @@ const eslintConfig = tseslint.config(
     },
   },
   {
-    // Presentational React components encapsulate multi-element accessible JSX layouts cleanly up to 80 lines.
-    files: ["src/components/**/*.tsx"],
+    files: ["src/**/*.ts", "src/**/*.tsx"],
     rules: {
-      "max-lines-per-function": ["error", { max: 80, skipBlankLines: true, skipComments: true }],
+      "no-magic-numbers": [
+        "error",
+        { ignore: [0, 1, -1, 2, 100], ignoreArrayIndexes: true, enforceConst: true },
+      ],
     },
   },
   {
@@ -93,16 +100,12 @@ const eslintConfig = tseslint.config(
       "tailwind.config.ts",
       "vitest.config.ts",
       "playwright.config.ts",
+      "scripts/check-structure.mjs",
     ],
     ...tseslint.configs.disableTypeChecked,
-  },
-  {
-    // Test suites group cohesive describe/it blocks with shared setup fixtures inside single files.
-    files: ["tests/**/*.ts", "tests/**/*.tsx"],
     rules: {
+      ...tseslint.configs.disableTypeChecked.rules,
       "security/detect-non-literal-fs-filename": "off",
-      "max-lines-per-function": "off",
-      "max-lines": "off",
     },
   },
 );

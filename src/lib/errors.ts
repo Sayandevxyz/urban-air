@@ -1,6 +1,11 @@
-/**
- * Centralized application error codes used across domain, service, and API layers.
- */
+// ============================================================================
+// src/lib/errors.ts
+// Defines typed AppError, Result<T, E>, safe JSON parsing, and error payloads.
+// ============================================================================
+
+import { HTTP_STATUS } from "@/lib/constants";
+
+/** Centralized application error codes used across domain, service, and API layers. */
 export type ErrorCode =
   | "VALIDATION_ERROR"
   | "UPSTREAM_ERROR"
@@ -13,18 +18,14 @@ export type ErrorCode =
   | "INTERNAL_ERROR"
   | "PROMPT_INJECTION_BLOCKED";
 
-/**
- * Structured application error separating safe client messages from internal context.
- */
+/** Structured application error separating safe client messages from internal context. */
 export class AppError extends Error {
   public readonly code: ErrorCode;
   public readonly statusCode: number;
   public readonly safeMessage: string;
   public readonly retryAfterSeconds: number | undefined;
 
-  /**
-   * Creates an AppError with an explicit error code, HTTP status, and client-safe message.
-   */
+  /** Creates an AppError with an explicit error code, HTTP status, and client-safe message. */
   public constructor(
     code: ErrorCode,
     safeMessage: string,
@@ -43,29 +44,21 @@ export class AppError extends Error {
   }
 }
 
-/**
- * Typed discriminated result returned at service boundaries instead of throwing raw errors.
- */
+/** Typed discriminated result returned at service boundaries instead of throwing raw errors. */
 export type Result<T, E = AppError> =
   { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: E };
 
-/**
- * Constructs a successful Result value.
- */
+/** Constructs a successful Result value. */
 export function ok<T>(value: T): Result<T, never> {
   return { ok: true, value };
 }
 
-/**
- * Constructs a failed Result containing a typed error.
- */
+/** Constructs a failed Result containing a typed error. */
 export function err<E>(error: E): Result<never, E> {
   return { ok: false, error };
 }
 
-/**
- * Safe public error payload guaranteed never to expose stack traces or secret internals.
- */
+/** Safe public error payload guaranteed never to expose stack traces or secret internals. */
 export interface SafeErrorPayload {
   readonly error: {
     readonly code: ErrorCode;
@@ -74,9 +67,7 @@ export interface SafeErrorPayload {
   };
 }
 
-/**
- * Converts an unknown thrown value or AppError into a client-safe HTTP response payload and status.
- */
+/** Converts an unknown thrown value or AppError into a client-safe HTTP response payload. */
 export function toSafeErrorResponse(input: unknown): {
   readonly statusCode: number;
   readonly body: SafeErrorPayload;
@@ -100,7 +91,7 @@ export function toSafeErrorResponse(input: unknown): {
   }
 
   return {
-    statusCode: 500,
+    statusCode: HTTP_STATUS.INTERNAL_ERROR,
     body: {
       error: {
         code: "INTERNAL_ERROR",
@@ -110,14 +101,16 @@ export function toSafeErrorResponse(input: unknown): {
   };
 }
 
-/**
- * Safely parses a JSON string into a discriminated Result without throwing raw exceptions.
- */
+/** Safely parses a JSON string into a discriminated Result without throwing exceptions. */
 export function safeJsonParse(rawText: string): Result<unknown> {
   try {
     const parsed: unknown = JSON.parse(rawText);
     return ok(parsed);
   } catch (cause) {
-    return err(new AppError("VALIDATION_ERROR", "Malformed JSON content.", 400, { cause }));
+    return err(
+      new AppError("VALIDATION_ERROR", "Malformed JSON content.", HTTP_STATUS.BAD_REQUEST, {
+        cause,
+      }),
+    );
   }
 }

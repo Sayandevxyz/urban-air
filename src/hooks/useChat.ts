@@ -1,3 +1,8 @@
+// ============================================================================
+// src/hooks/useChat.ts
+// Manages grounded chat turns, submission state, and error handling.
+// ============================================================================
+
 "use client";
 
 import { useState } from "react";

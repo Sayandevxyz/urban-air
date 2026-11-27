@@ -1,8 +1,17 @@
+// ============================================================================
+// src/domain/aqi-breakpoints.ts
+// Computes US EPA pollutant sub-indices and composite AQI/EAQI estimates.
+// ============================================================================
+
+import { MAX_US_AQI } from "@/lib/constants";
 import type { PollutantKey, PollutantReadings } from "@/types/air-quality";
 
-/**
- * Ordered list of supported urban air pollutants evaluated across dashboard and guidance.
- */
+const EAQI_MAX_ESTIMATE = 120;
+const EAQI_SCALE_FACTOR = 100;
+const EAQI_DIVISORS = { pm25: 75, pm10: 150, no2: 340, o3: 380 } as const;
+const PM25_TRUNCATION_SCALE = 10;
+
+/** Ordered list of criteria pollutants evaluated across dashboard, alerts, and guidance. */
 export const POLLUTANT_KEYS: readonly PollutantKey[] = [
   "pm25",
   "pm10",
@@ -74,16 +83,13 @@ const CO_BREAKPOINTS: readonly BreakpointRow[] = [
 const BREAKPOINT_MAP: Readonly<
   Record<PollutantKey, { rows: readonly BreakpointRow[]; scale: number }>
 > = {
-  pm25: { rows: PM25_BREAKPOINTS, scale: 10 },
+  pm25: { rows: PM25_BREAKPOINTS, scale: PM25_TRUNCATION_SCALE },
   pm10: { rows: PM10_BREAKPOINTS, scale: 1 },
   o3: { rows: O3_BREAKPOINTS, scale: 1 },
   no2: { rows: NO2_BREAKPOINTS, scale: 1 },
   so2: { rows: SO2_BREAKPOINTS, scale: 1 },
   co: { rows: CO_BREAKPOINTS, scale: 1 },
 };
-
-const MAX_US_AQI = 500;
-const MAX_EAQI_ESTIMATE = 120;
 
 function interpolateBreakpoint(
   valueUgM3: number,
@@ -103,17 +109,13 @@ function interpolateBreakpoint(
   return MAX_US_AQI;
 }
 
-/**
- * Computes the US EPA sub-index AQI (0-500) for a pollutant concentration in ug/m3.
- */
+/** Computes the US EPA sub-index AQI (0-500) for a pollutant concentration in ug/m3. */
 export function calculatePollutantUsAqi(key: PollutantKey, valueUgM3: number): number {
   const entry = BREAKPOINT_MAP[key];
   return interpolateBreakpoint(valueUgM3, entry.rows, entry.scale);
 }
 
-/**
- * Computes composite US AQI as the maximum sub-index across all six criteria pollutants.
- */
+/** Computes composite US AQI as the maximum sub-index across all six criteria pollutants. */
 export function computeCompositeUsAqi(readings: PollutantReadings): number {
   let maxIndex = 0;
   for (const key of POLLUTANT_KEYS) {
@@ -125,13 +127,23 @@ export function computeCompositeUsAqi(readings: PollutantReadings): number {
   return maxIndex;
 }
 
-/**
- * Estimates a European AQI value (0-120 scale) from pollutant concentrations when EAQI is omitted.
- */
+/** Estimates a European AQI score (0-120) from raw pollutants when EAQI is omitted. */
 export function estimateEuropeanAqiFromPollutants(readings: PollutantReadings): number {
-  const pm25Score = Math.min(MAX_EAQI_ESTIMATE, Math.round((readings.pm25 / 75) * 100));
-  const pm10Score = Math.min(MAX_EAQI_ESTIMATE, Math.round((readings.pm10 / 150) * 100));
-  const no2Score = Math.min(MAX_EAQI_ESTIMATE, Math.round((readings.no2 / 340) * 100));
-  const o3Score = Math.min(MAX_EAQI_ESTIMATE, Math.round((readings.o3 / 380) * 100));
+  const pm25Score = Math.min(
+    EAQI_MAX_ESTIMATE,
+    Math.round((readings.pm25 / EAQI_DIVISORS.pm25) * EAQI_SCALE_FACTOR),
+  );
+  const pm10Score = Math.min(
+    EAQI_MAX_ESTIMATE,
+    Math.round((readings.pm10 / EAQI_DIVISORS.pm10) * EAQI_SCALE_FACTOR),
+  );
+  const no2Score = Math.min(
+    EAQI_MAX_ESTIMATE,
+    Math.round((readings.no2 / EAQI_DIVISORS.no2) * EAQI_SCALE_FACTOR),
+  );
+  const o3Score = Math.min(
+    EAQI_MAX_ESTIMATE,
+    Math.round((readings.o3 / EAQI_DIVISORS.o3) * EAQI_SCALE_FACTOR),
+  );
   return Math.max(pm25Score, pm10Score, no2Score, o3Score);
 }

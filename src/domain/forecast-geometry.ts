@@ -1,14 +1,28 @@
-import { CHART_HEADROOM_AQI, DEFAULT_CHART_MAX_AQI } from "@/lib/constants";
+// ============================================================================
+// src/domain/forecast-geometry.ts
+// Computes accessible SVG polyline and bar geometry for hourly and daily charts.
+// ============================================================================
+
+import { CHART_HEADROOM_AQI, DEFAULT_CHART_MAX_AQI, ISO_SLICE } from "@/lib/constants";
 import type { DailyTrendPoint, HourlyForecastPoint } from "@/types/air-quality";
 
+/** Full SVG viewBox width shared by hourly and daily forecast charts. */
 export const CHART_WIDTH = 640;
+/** Full SVG viewBox height shared by hourly and daily forecast charts. */
 export const CHART_HEIGHT = 220;
+/** Left SVG margin reserved for Y-axis numeric labels. */
 export const CHART_PAD_LEFT = 40;
+/** Right SVG margin keeping terminal markers inside the canvas. */
 export const CHART_PAD_RIGHT = 16;
+/** Top SVG padding keeping peak labels clear of the upper border. */
 export const CHART_PAD_TOP = 16;
+/** Bottom SVG margin reserved for timestamp and date axis labels. */
 export const CHART_PAD_BOTTOM = 28;
+/** Usable inner SVG plotting width after accounting for margins. */
 export const CHART_INNER_WIDTH = CHART_WIDTH - CHART_PAD_LEFT - CHART_PAD_RIGHT;
+/** Usable inner SVG plotting height after accounting for margins. */
 export const CHART_INNER_HEIGHT = CHART_HEIGHT - CHART_PAD_TOP - CHART_PAD_BOTTOM;
+
 const HOURLY_TICK_STEP = 6;
 const DAILY_BAR_MAX_WIDTH = 48;
 const DAILY_BAR_SLOT_RATIO = 0.6;
@@ -21,6 +35,7 @@ interface HourlyTickMarker {
   readonly y: number;
 }
 
+/** Precomputed geometry for rendering the 48-hour accessible US AQI chart. */
 export interface HourlyChartGeometry {
   readonly minHourly: number;
   readonly maxHourly: number;
@@ -40,14 +55,13 @@ interface DailyBarGeometry {
   readonly height: number;
 }
 
+/** Precomputed bar rectangles and upper axis bound for the 7-day trend chart. */
 export interface DailyChartGeometry {
   readonly dailyMax: number;
   readonly bars: readonly DailyBarGeometry[];
 }
 
-/**
- * Computes the horizontal SVG X coordinate for an indexed forecast point.
- */
+/** Computes the horizontal SVG X coordinate for an indexed forecast point. */
 export function computeHourlyX(index: number, count: number): number {
   if (count <= 1) {
     return CHART_PAD_LEFT + CHART_INNER_WIDTH / 2;
@@ -55,17 +69,13 @@ export function computeHourlyX(index: number, count: number): number {
   return CHART_PAD_LEFT + (index / (count - 1)) * CHART_INNER_WIDTH;
 }
 
-/**
- * Computes the vertical SVG Y coordinate for a US AQI value within the scaled chart domain.
- */
+/** Computes the vertical SVG Y coordinate for a US AQI value within the chart domain. */
 export function computeChartY(usAqi: number, chartMax: number): number {
   const safeMax = Math.max(1, chartMax);
   return CHART_PAD_TOP + CHART_INNER_HEIGHT - (usAqi / safeMax) * CHART_INNER_HEIGHT;
 }
 
-/**
- * Computes SVG polyline coordinates, threshold guide, and sampled time ticks for 48h forecast data.
- */
+/** Computes SVG polyline coordinates, threshold guide, and sampled ticks for 48h forecasts. */
 export function buildHourlyGeometry(hourly: readonly HourlyForecastPoint[]): HourlyChartGeometry {
   const values = hourly.map((point) => point.usAqi);
   const minHourly = values.length > 0 ? Math.min(...values) : 0;
@@ -86,7 +96,7 @@ export function buildHourlyGeometry(hourly: readonly HourlyForecastPoint[]): Hou
     if (index % HOURLY_TICK_STEP === 0) {
       tickMarkers.push({
         timeIso: point.timeIso,
-        label: point.timeIso.slice(11, 16),
+        label: point.timeIso.slice(ISO_SLICE.hourStart, ISO_SLICE.minuteEnd),
         x: computeHourlyX(index, hourly.length),
         y: computeChartY(point.usAqi, chartMax),
       });
@@ -96,9 +106,7 @@ export function buildHourlyGeometry(hourly: readonly HourlyForecastPoint[]): Hou
   return { minHourly, maxHourly, chartMax, thresholdY, polylinePoints, tickMarkers };
 }
 
-/**
- * Computes SVG bar positions and heights for 7-day trend visualization.
- */
+/** Computes SVG bar positions and heights for 7-day trend visualization. */
 export function buildDailyGeometry(daily: readonly DailyTrendPoint[]): DailyChartGeometry {
   const maxCandidates = daily.map((day) => day.maxUsAqi);
   const dailyMax = Math.max(DEFAULT_CHART_MAX_AQI, ...maxCandidates);
@@ -111,7 +119,7 @@ export function buildDailyGeometry(daily: readonly DailyTrendPoint[]): DailyChar
     const y = CHART_PAD_TOP + CHART_INNER_HEIGHT - height;
     return {
       dateIso: day.dateIso,
-      dateLabel: day.dateIso.slice(5),
+      dateLabel: day.dateIso.slice(ISO_SLICE.monthDayStart),
       avgUsAqi: day.avgUsAqi,
       x,
       y,

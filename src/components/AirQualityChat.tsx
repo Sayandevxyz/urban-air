@@ -1,3 +1,8 @@
+// ============================================================================
+// src/components/AirQualityChat.tsx
+// Renders grounded AI chat prompts, plain-text conversation turns, and input.
+// ============================================================================
+
 "use client";
 
 import { useTranslations } from "next-intl";
@@ -9,9 +14,18 @@ import type { AirQualityReport } from "@/types/air-quality";
 import type { ChatTurn } from "@/types/api";
 import type { ResidentProfile } from "@/types/guidance";
 
+const QUICK_PROMPT_KEYS = [
+  "quickPrompts.smogPlan",
+  "quickPrompts.indoorHacks",
+  "quickPrompts.bestTime",
+  "quickPrompts.familyProtect",
+] as const;
+
+const isSubmitKey = (event: KeyboardEvent<HTMLTextAreaElement>) =>
+  event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing;
+
 function ChatMessageList({ turns }: { readonly turns: readonly ChatTurn[] }) {
   const t = useTranslations("assistant");
-
   return (
     <div
       aria-live="polite"
@@ -40,31 +54,48 @@ function ChatMessageList({ turns }: { readonly turns: readonly ChatTurn[] }) {
   );
 }
 
-function ChatComposer({
-  input,
+function ChatQuickPrompts({
   sending,
-  onChangeInput,
-  onSubmitQuestion,
+  onSelectPrompt,
 }: {
-  readonly input: string;
   readonly sending: boolean;
-  readonly onChangeInput: (value: string) => void;
-  readonly onSubmitQuestion: (questionText: string) => void;
+  readonly onSelectPrompt: (text: string) => void;
 }) {
   const t = useTranslations("assistant");
+  return (
+    <div className="mt-4 flex flex-wrap gap-2">
+      {QUICK_PROMPT_KEYS.map((key) => {
+        const text = t(key);
+        return (
+          <button
+            key={key}
+            type="button"
+            disabled={sending}
+            onClick={() => {
+              onSelectPrompt(text);
+            }}
+            className="min-h-[44px] rounded-full border border-borderc-strong bg-surface px-3.5 py-2 text-left text-xs font-semibold text-ink hover:bg-surface-muted disabled:opacity-50"
+          >
+            {text}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
+function ChatComposer({ chat }: { readonly chat: ReturnType<typeof useChat> }) {
+  const t = useTranslations("assistant");
   const handleSubmit = (event: SyntheticEvent) => {
     event.preventDefault();
-    onSubmitQuestion(input);
+    void chat.submitQuestion(chat.input);
   };
-
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+    if (isSubmitKey(event)) {
       event.preventDefault();
-      onSubmitQuestion(input);
+      void chat.submitQuestion(chat.input);
     }
   };
-
   return (
     <form onSubmit={handleSubmit} className="mt-4 space-y-2">
       <label htmlFor="chat-message-input" className="block text-sm font-semibold text-ink">
@@ -75,29 +106,43 @@ function ChatComposer({
           id="chat-message-input"
           rows={2}
           maxLength={MAX_CHAT_MESSAGE_LENGTH}
-          value={input}
+          value={chat.input}
           placeholder={t("inputPlaceholder")}
-          onChange={(event) => {
-            onChangeInput(event.target.value);
+          onChange={(e) => {
+            chat.setInput(e.target.value);
           }}
           onKeyDown={handleKeyDown}
           className="min-h-[48px] flex-1 rounded-lg border-2 border-borderc-strong bg-surface px-3 py-2 text-base text-ink placeholder:text-ink-muted"
         />
         <button
           type="submit"
-          disabled={sending || input.trim().length === 0}
+          disabled={chat.sending || chat.input.trim().length === 0}
           className="min-h-[48px] shrink-0 rounded-lg border-2 border-accent bg-accent px-5 py-2 text-sm font-semibold text-accent-ink hover:bg-accent-strong disabled:opacity-50"
         >
-          {sending ? t("sending") : t("sendButton")}
+          {t(chat.sending ? "sending" : "sendButton")}
         </button>
       </div>
     </form>
   );
 }
 
-/**
- * Grounded AI assistant panel rendering responses strictly as plain text with zero HTML injection.
- */
+function ChatNotices({ report }: { readonly report: AirQualityReport }) {
+  const t = useTranslations("assistant");
+  return (
+    <div className="mt-2 space-y-1 rounded-lg border border-borderc bg-surface p-3 text-xs text-ink-muted">
+      <p className="font-semibold text-ink">{t("medicalNotice")}</p>
+      <p>
+        {t("sourceNotice", {
+          city: report.location.name,
+          source: report.source,
+          updated: report.updatedAtIso,
+        })}
+      </p>
+    </div>
+  );
+}
+
+/** Grounded AI assistant panel rendering responses strictly as plain text with zero HTML injection. */
 export function AirQualityChat({
   report,
   profile,
@@ -107,23 +152,11 @@ export function AirQualityChat({
 }) {
   const t = useTranslations("assistant");
   const { locale } = useAppLocale();
-  const { input, setInput, sending, turns, errorText, submitQuestion } = useChat(
-    report,
-    profile,
-    locale,
-    {
-      errorReply: t("errorReply"),
-      fallbackBadge: t("fallbackBadge"),
-      liveLlmBadge: t("liveLlmBadge"),
-    },
-  );
-
-  const quickPrompts = [
-    t("quickPrompts.smogPlan"),
-    t("quickPrompts.indoorHacks"),
-    t("quickPrompts.bestTime"),
-    t("quickPrompts.familyProtect"),
-  ];
+  const chat = useChat(report, profile, locale, {
+    errorReply: t("errorReply"),
+    fallbackBadge: t("fallbackBadge"),
+    liveLlmBadge: t("liveLlmBadge"),
+  });
 
   return (
     <section
@@ -133,50 +166,20 @@ export function AirQualityChat({
       <h2 id="assistant-heading" className="text-xl font-bold text-ink">
         {t("sectionTitle")}
       </h2>
-
-      <div className="mt-2 space-y-1 rounded-lg border border-borderc bg-surface p-3 text-xs text-ink-muted">
-        <p className="font-semibold text-ink">{t("medicalNotice")}</p>
-        <p>
-          {t("sourceNotice", {
-            city: report.location.name,
-            source: report.source,
-            updated: report.updatedAtIso,
-          })}
-        </p>
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        {quickPrompts.map((promptText) => (
-          <button
-            key={promptText}
-            type="button"
-            disabled={sending}
-            onClick={() => {
-              void submitQuestion(promptText);
-            }}
-            className="min-h-[44px] rounded-full border border-borderc-strong bg-surface px-3.5 py-2 text-left text-xs font-semibold text-ink hover:bg-surface-muted disabled:opacity-50"
-          >
-            {promptText}
-          </button>
-        ))}
-      </div>
-
-      <ChatMessageList turns={turns} />
-
-      {errorText && (
-        <p role="alert" className="mt-2 text-sm font-semibold text-rose-800 dark:text-rose-200">
-          {errorText}
-        </p>
-      )}
-
-      <ChatComposer
-        input={input}
-        sending={sending}
-        onChangeInput={setInput}
-        onSubmitQuestion={(text) => {
-          void submitQuestion(text);
+      <ChatNotices report={report} />
+      <ChatQuickPrompts
+        sending={chat.sending}
+        onSelectPrompt={(p) => {
+          void chat.submitQuestion(p);
         }}
       />
+      <ChatMessageList turns={chat.turns} />
+      {chat.errorText && (
+        <p role="alert" className="mt-2 text-sm font-semibold text-rose-800 dark:text-rose-200">
+          {chat.errorText}
+        </p>
+      )}
+      <ChatComposer chat={chat} />
     </section>
   );
 }

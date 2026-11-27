@@ -20,9 +20,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "test:a11y": "playwright test tests/e2e/a11y.spec.ts",
+    "test:a11y": "playwright test -g \"Accessibility audit\"",
     "audit:deps": "npm audit --audit-level=high",
-    "verify": "npm run lint && npm run typecheck && npm run format:check && npm run test:coverage && npm run build && npm run audit:deps"
+    "verify": "node scripts/check-structure.mjs && npm run lint && npm run typecheck && npm run format:check && npm run test:coverage && npm run build && npm run audit:deps"
   },
   "dependencies": {
     "next": "^15.5.29",

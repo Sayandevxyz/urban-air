@@ -1,3 +1,8 @@
+// ============================================================================
+// src/app/api/air-quality/route.ts
+// Serves live Open-Meteo or seeded Demo Mode air-quality and forecast reports.
+// ============================================================================
+
 import type { NextResponse } from "next/server";
 import { ok } from "@/lib/errors";
 import { logger } from "@/lib/logger";
