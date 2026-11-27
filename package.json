@@ -66,5 +66,13 @@
   },
   "overrides": {
     "postcss": "$postcss"
+  },
+  "knip": {
+    "ignoreDependencies": [
+      "axe-core",
+      "eslint-config-next",
+      "eslint-plugin-import",
+      "eslint-plugin-jsx-a11y"
+    ]
   }
 }

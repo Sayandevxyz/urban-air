@@ -169,18 +169,21 @@ if node -e '
 const fs = require("fs");
 const reqDoc = fs.readFileSync("docs/REQUIREMENTS.md", "utf8");
 const readme = fs.readFileSync("README.md", "utf8");
+const aligned = fs.readFileSync("PROBLEM_ALIGNMENT.md", "utf8");
 const missing = [];
 for (let i = 1; i <= 26; i++) {
   const token = `**R${i}**`;
-  if (!reqDoc.includes(token) || !readme.includes(token)) missing.push(`R${i}`);
+  if (!reqDoc.includes(token) || !readme.includes(token) || !aligned.includes(token)) {
+    missing.push(`R${i}`);
+  }
 }
 if (missing.length > 0) {
   console.error("Missing traceability entries:", missing.join(", "));
   process.exit(1);
 }
-console.log("All requirements R1..R26 mapped in docs/REQUIREMENTS.md and README.md.");
+console.log("All requirements R1..R26 mapped across docs/REQUIREMENTS.md, README.md, and PROBLEM_ALIGNMENT.md.");
 '; then
-  pass "Check 10: All 26 requirements (R1-R26) present in REQUIREMENTS.md and README traceability matrix"
+  pass "Check 10: All 26 requirements (R1-R26) mapped in REQUIREMENTS, README, and PROBLEM_ALIGNMENT"
 else
   fail "Check 10: Missing requirements traceability entries"
 fi
@@ -264,43 +267,42 @@ else
   fail "Check 11: Live runtime verification failed"
 fi
 
-# 12. Required Documentation, Performance Report (>= 95 Desktop), & Governance Files
+# 12. Required Documentation, Pillar Reports (>= 95 Desktop), & Governance Files
 if node - <<'NODE_EOF'
 const fs = require("fs");
 const required = [
   "README.md",
-  "CONTRIBUTING.md",
+  "CODE_QUALITY.md",
+  "TESTING.md",
   "SECURITY.md",
+  "EFFICIENCY.md",
+  "ACCESSIBILITY.md",
+  "PROBLEM_ALIGNMENT.md",
+  "docs/REQUIREMENTS.md",
+  "docs/DECISIONS.md",
+  "docs/PLAN.md",
   "LICENSE",
   ".editorconfig",
   ".nvmrc",
   ".env.example",
-  "knip.json",
+  ".pre-commit-config.yaml",
   "public/.well-known/security.txt",
   "scripts/check-secrets.sh",
+  "scripts/check-structure.mjs",
   ".github/workflows/ci.yml",
   ".github/dependabot.yml",
-  "docs/REQUIREMENTS.md",
-  "docs/ARCHITECTURE.md",
-  "docs/DEPENDENCIES.md",
-  "docs/SECURITY.md",
-  "docs/ACCESSIBILITY.md",
-  "docs/PERFORMANCE.md",
-  "docs/TESTING.md",
-  "docs/DEMO_SCRIPT.md",
-  "docs/SELF_AUDIT.md",
 ];
 const missing = required.filter((f) => !fs.existsSync(f));
-const perf = fs.existsSync("docs/PERFORMANCE.md") ? fs.readFileSync("docs/PERFORMANCE.md", "utf8") : "";
-const hasLighthouseDesktop = /Desktop.*\*\*9[5-9]\*\*|Desktop.*\*\*100\*\*/.test(perf);
+const eff = fs.existsSync("EFFICIENCY.md") ? fs.readFileSync("EFFICIENCY.md", "utf8") : "";
+const hasLighthouseDesktop = /Desktop.*(?:\*\*|`)?(?:100|9[5-9])(?:\*\*|`)?\s+Performance/.test(eff);
 if (missing.length > 0 || !hasLighthouseDesktop) {
   console.error({ missing, hasLighthouseDesktop });
   process.exit(1);
 }
-console.log("All 21 required documentation & governance artifacts verified.");
+console.log("All 20 required pillar docs, ADRs, plan & governance artifacts verified.");
 NODE_EOF
 then
-  pass "Check 12: All 21 governance/security/testing docs and documented Lighthouse >= 95 report verified"
+  pass "Check 12: All 20 pillar/ADR/governance docs and documented Lighthouse >= 95 report verified"
 else
   fail "Check 12: Missing required docs/governance files or performance evidence"
 fi

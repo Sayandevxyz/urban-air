@@ -106,15 +106,65 @@ function isDocumentableExport(node) {
   );
 }
 
-function validateExportedJsDoc(relPath, content, violations) {
+function validateTypeScriptAst(relPath, content, violations) {
   if (!relPath.endsWith(".ts") && !relPath.endsWith(".tsx")) return;
   const sf = ts.createSourceFile(relPath, content, ts.ScriptTarget.Latest, true);
+  let castFlagged = false;
+  const walk = (node) => {
+    const isCast =
+      ts.isTypeAssertionExpression(node) ||
+      (ts.isAsExpression(node) && node.type.getText(sf) !== "const");
+    if (!castFlagged && isCast) {
+      violations.push(`${relPath}: disallowed non-const "as" type assertion`);
+      castFlagged = true;
+    }
+    ts.forEachChild(node, walk);
+  };
   ts.forEachChild(sf, (node) => {
+    walk(node);
     if (!isDocumentableExport(node) || ts.getJSDocCommentsAndTags(node).length > 0) return;
-    const firstDecl = ts.isVariableStatement(node) ? node.declarationList.declarations[0] : null;
-    const name = node.name?.text ?? firstDecl?.name.getText(sf) ?? "export";
-    violations.push(`${relPath}: exported "${name}" missing WHY JSDoc`);
+    const decl = ts.isVariableStatement(node) ? node.declarationList.declarations[0] : null;
+    violations.push(
+      `${relPath}: exported "${node.name?.text ?? decl?.name.getText(sf) ?? "export"}" missing WHY JSDoc`,
+    );
   });
+}
+
+const PILLAR_DOCS = [
+  "CODE_QUALITY.md",
+  "TESTING.md",
+  "SECURITY.md",
+  "EFFICIENCY.md",
+  "ACCESSIBILITY.md",
+  "PROBLEM_ALIGNMENT.md",
+];
+
+function validateDocPaths(doc, violations) {
+  if (!fs.existsSync(doc)) return;
+  for (const [, ref] of fs
+    .readFileSync(doc, "utf8")
+    .matchAll(/`([A-Za-z0-9_./-]+\.[A-Za-z0-9]+)`/g)) {
+    if (!ref.includes("*") && ref.includes("/") && !fs.existsSync(ref)) {
+      violations.push(`${doc}: broken repo path reference "${ref}"`);
+    }
+  }
+}
+
+function validateDocs(violations) {
+  for (const doc of PILLAR_DOCS) {
+    if (!fs.existsSync(doc)) {
+      violations.push(`${doc}: missing required root pillar doc`);
+      continue;
+    }
+    const lines = fs.readFileSync(doc, "utf8").split(/\r?\n/);
+    if (lines.length > 120) violations.push(`${doc}: ${lines.length} lines exceeds 120 limit`);
+    if (!lines.slice(0, 5).some((l) => l.includes("Evaluation criterion:")))
+      violations.push(`${doc}: missing opening "Evaluation criterion:" line`);
+  }
+  const readmeLines = fs.readFileSync("README.md", "utf8").split(/\r?\n/).length;
+  if (readmeLines > 150) violations.push(`README.md: ${readmeLines} lines exceeds 150 limit`);
+  for (const doc of ["PROBLEM_ALIGNMENT.md", "docs/REQUIREMENTS.md"])
+    validateDocPaths(doc, violations);
 }
 
 const violations = [];
@@ -130,8 +180,9 @@ for (const file of files) {
   if (!/\.(ts|tsx|mjs|sh)$/.test(relPath)) continue;
   validateBanner(relPath, content, violations);
   if (!relPath.startsWith("scripts/")) validateSuppressions(relPath, content, violations);
-  if (relPath.startsWith("src/")) validateExportedJsDoc(relPath, content, violations);
+  if (relPath.startsWith("src/")) validateTypeScriptAst(relPath, content, violations);
 }
+validateDocs(violations);
 
 if (violations.length > 0) {
   process.stderr.write(`Structure check failed:\n${violations.join("\n")}\n`);
