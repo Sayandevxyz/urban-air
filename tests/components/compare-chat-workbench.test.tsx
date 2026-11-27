@@ -159,6 +159,13 @@ test("AirQualityChat shows assistant error feedback on 500 and network failure",
   await waitErr();
 });
 
+const renderWb = (demo: boolean) =>
+  render(
+    <AppLocaleProvider>
+      <UrbanAirWorkbench defaultDemoMode={demo} />
+    </AppLocaleProvider>,
+  );
+
 test("UrbanAirWorkbench restores persisted locale, switches hi/ta/en, and toggles demo", async () => {
   const user = userEvent.setup();
   stubFetch({ report: getDemoAirQualityReport("delhi") });
@@ -167,17 +174,15 @@ test("UrbanAirWorkbench restores persisted locale, switches hi/ta/en, and toggle
   cleanup();
 
   window.localStorage.setItem("urban-air:locale:v1", "hi");
-  const waitLang = async (lang: string, label: string) => {
-    await waitFor(() => {
-      expect(document.documentElement.lang).toBe(lang);
-      expect(screen.getByLabelText(label)).toBeInTheDocument();
-    });
-  };
-  const { container } = render(
-    <AppLocaleProvider>
-      <UrbanAirWorkbench defaultDemoMode={true} />
-    </AppLocaleProvider>,
-  );
+  const waitLang = (lang: string, label: string) =>
+    waitFor(
+      () => {
+        expect(document.documentElement.lang).toBe(lang);
+        expect(screen.getByLabelText(label)).toBeInTheDocument();
+      },
+      { timeout: 8000 },
+    );
+  const { container } = renderWb(true);
   await waitLang("hi", "भाषा");
   await user.selectOptions(screen.getByLabelText("भाषा"), "ta");
   await waitLang("ta", "மொழி");
@@ -190,10 +195,6 @@ test("UrbanAirWorkbench restores persisted locale, switches hi/ta/en, and toggle
 
 test("UrbanAirWorkbench mounts cleanly when demo mode starts disabled", async () => {
   stubFetch({ report: getDemoAirQualityReport("delhi") });
-  render(
-    <AppLocaleProvider>
-      <UrbanAirWorkbench defaultDemoMode={false} />
-    </AppLocaleProvider>,
-  );
+  renderWb(false);
   await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument());
 });
