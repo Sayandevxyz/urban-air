@@ -7,6 +7,7 @@
 
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
+import { SectionCard, TONE_SURFACE_CLASSES } from "@/components/UiPrimitives";
 import { scoreActivityWindows } from "@/domain/planner";
 import { ISO_SLICE } from "@/lib/constants";
 import type { AirQualityReport } from "@/types/air-quality";
@@ -62,9 +63,9 @@ function WindowExtremeCard({
 }) {
   const t = useTranslations("planner");
   const isBest = variant === "best";
-  const cardClasses = isBest
-    ? "rounded-lg border-2 border-emerald-700 bg-emerald-50 p-4 text-emerald-950 dark:border-emerald-400 dark:bg-emerald-950/60 dark:text-emerald-100"
-    : "rounded-lg border-2 border-rose-700 bg-rose-50 p-4 text-rose-950 dark:border-rose-400 dark:bg-rose-950/60 dark:text-rose-100";
+  const cardClasses = `rounded-lg p-4 ${
+    isBest ? TONE_SURFACE_CLASSES.emerald : TONE_SURFACE_CLASSES.rose
+  }`;
 
   return (
     <div className={cardClasses}>
@@ -107,7 +108,7 @@ export function ActivityPlanner({ report, persona }: ActivityPlannerProps) {
   );
 
   return (
-    <section className="rounded-xl border border-borderc bg-surface-elevated p-4 shadow-sm sm:p-6">
+    <SectionCard>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="planner-heading" className="text-xl font-bold text-ink">
           {t("sectionTitle")}
@@ -126,6 +127,6 @@ export function ActivityPlanner({ report, persona }: ActivityPlannerProps) {
         <p className="font-semibold text-ink">{t("formulaTitle")}</p>
         <p className="mt-1">{t("formulaDesc")}</p>
       </div>
-    </section>
+    </SectionCard>
   );
 }

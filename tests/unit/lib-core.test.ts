@@ -8,7 +8,12 @@ import { loadLocaleMessages } from "@/components/LocaleContext";
 import en from "@/i18n/en.json";
 import hi from "@/i18n/hi.json";
 import ta from "@/i18n/ta.json";
-import { fetchAirQuality, fetchApiJson, readCachedSnapshot } from "@/lib/api-client";
+import {
+  fetchAirQuality,
+  fetchApiJson,
+  parseGeocodePayload,
+  readCachedSnapshot,
+} from "@/lib/api-client";
 import { getEnv, parseEnv, resetEnvCache } from "@/lib/env";
 import { AppError, err, ok, safeJsonParse, toSafeErrorResponse } from "@/lib/errors";
 import { logger, redactCoordinate, sanitizeLogContext } from "@/lib/logger";
@@ -128,45 +133,62 @@ const jsonRes = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } }),
   );
 
-test("api-client and readCachedSnapshot handle aborts, 429, missing report, geo skip, and storage", async () => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(() => Promise.reject(new DOMException("aborted", "AbortError"))),
-  );
-  expect(await fetchApiJson("/api/health")).toEqual({ ok: false, kind: "aborted" });
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(() => jsonRes("str", 429)),
-  );
-  expect(await fetchApiJson("/api/geocode")).toEqual({
-    ok: false,
-    kind: "rate_limited",
-    retryAfterSeconds: 30,
-  });
+const stubFetch = (fn: () => Promise<Response>) => {
+  vi.stubGlobal("fetch", vi.fn(fn));
+};
 
-  const delhiLoc = getDemoCityLocations()[0];
-  if (delhiLoc) {
-    expect((await fetchAirQuality(delhiLoc, true)).ok).toBe(true);
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() => jsonRes({})),
-    );
-    expect(await fetchAirQuality(delhiLoc, false)).toEqual({
+test("fetchApiJson and parseGeocodePayload validate responses and handle aborts and 429s", async () => {
+  stubFetch(() => Promise.reject(new DOMException("aborted", "AbortError")));
+  expect((await fetchApiJson("/api/health", parseGeocodePayload)).ok).toBe(false);
+  stubFetch(() => Promise.reject(new Error("offline")));
+  expect((await fetchApiJson("/api/health", parseGeocodePayload)).ok).toBe(false);
+  for (const [body, sec] of [
+    ["str", 30],
+    [{ error: { retryAfterSeconds: 12 } }, 12],
+    [{ error: { retryAfterSeconds: -1 } }, 30],
+  ] as const) {
+    stubFetch(() => jsonRes(body, 429));
+    expect(await fetchApiJson("/api/geocode", parseGeocodePayload)).toEqual({
       ok: false,
-      kind: "error",
-      status: 502,
+      kind: "rate_limited",
+      retryAfterSeconds: sec,
     });
-    const geoLoc = { ...delhiLoc, key: "geo-self-current" };
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() => jsonRes({ report: { ...getDemoAirQualityReport("delhi"), location: geoLoc } })),
-    );
+  }
+  const loc = getDemoCityLocations()[0];
+  expect(parseGeocodePayload({})).toEqual({});
+  for (const b of [null, [], { results: "bad" }]) expect(parseGeocodePayload(b)).toBeNull();
+  if (loc) {
+    expect(parseGeocodePayload({ results: [{ ...loc, key: 1 }] })).toBeNull();
+    expect(parseGeocodePayload({ results: [{ ...loc, latitude: Number.NaN }] })).toBeNull();
+    expect(parseGeocodePayload({ results: [loc] })).toEqual({ results: [loc] });
+  }
+  vi.restoreAllMocks();
+});
+
+test("fetchAirQuality and readCachedSnapshot validate reports and handle storage fallbacks", async () => {
+  const loc = getDemoCityLocations()[0];
+  if (loc) {
+    expect((await fetchAirQuality(loc, true)).ok).toBe(true);
+    for (const [payload, status] of [
+      ["bad", 200],
+      [{ report: "bad" }, 200],
+      [{}, 502],
+    ] as const) {
+      stubFetch(() => jsonRes(payload));
+      expect(await fetchAirQuality(loc, false)).toEqual({ ok: false, kind: "error", status });
+    }
+    const geoLoc = { ...loc, key: "geo-self-current" };
+    stubFetch(() => jsonRes({ report: { ...getDemoAirQualityReport("delhi"), location: geoLoc } }));
     expect((await fetchAirQuality(geoLoc, false)).ok).toBe(true);
     expect(window.localStorage.getItem("urban-air:last-snapshot:v1")).toBeNull();
-    expect((await fetchAirQuality({ ...delhiLoc, key: "loc-2861-7721" }, false)).ok).toBe(true);
+    stubFetch(() => jsonRes({ report: getDemoAirQualityReport("delhi") }));
+    expect((await fetchAirQuality({ ...loc, key: "loc-2861-7721" }, false)).ok).toBe(true);
+    expect(readCachedSnapshot()?.source).toBe("cached");
   }
-  window.localStorage.setItem("urban-air:last-snapshot:v1", JSON.stringify({ partial: true }));
-  expect(readCachedSnapshot()).toBeNull();
+  for (const val of ["{bad", JSON.stringify({ source: "x" })]) {
+    window.localStorage.setItem("urban-air:last-snapshot:v1", val);
+    expect(readCachedSnapshot()).toBeNull();
+  }
   vi.spyOn(Storage.prototype, "getItem").mockImplementationOnce(() => {
     throw new Error("blocked");
   });

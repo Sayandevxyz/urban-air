@@ -10,6 +10,7 @@ import { scoreActivityWindows } from "@/domain/planner";
 import { useAsyncResource } from "@/hooks/useAsyncResource";
 import { fetchApiJson } from "@/lib/api-client";
 import type { SupportedLocale } from "@/lib/constants";
+import { toMap, toStr } from "@/lib/errors";
 import type { ChatRequestPayload } from "@/services/schemas";
 import type { AirQualityReport } from "@/types/air-quality";
 import type { AssistantResponsePayload, ChatTurn } from "@/types/api";
@@ -44,11 +45,35 @@ function buildChatRequest(
   };
 }
 
+function parseAssistantPayload(raw: unknown): AssistantResponsePayload | null {
+  try {
+    const m = toMap(raw);
+    const engine = m.get("engine");
+    const refused = m.get("refused");
+    if (
+      (engine !== "gemini" && engine !== "anthropic" && engine !== "fallback") ||
+      typeof refused !== "boolean"
+    ) {
+      return null;
+    }
+    return {
+      reply: toStr(m.get("reply")),
+      engine,
+      refused,
+      dataSource: toStr(m.get("dataSource")),
+      updatedAtIso: toStr(m.get("updatedAtIso")),
+      disclaimer: toStr(m.get("disclaimer")),
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Dispatches a grounded chat request to POST /api/chat via the shared API client.
  */
 function sendChatRequest(payload: ChatRequestPayload, signal?: AbortSignal) {
-  return fetchApiJson<AssistantResponsePayload>("/api/chat", {
+  return fetchApiJson("/api/chat", parseAssistantPayload, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

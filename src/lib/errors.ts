@@ -114,3 +114,29 @@ export function safeJsonParse(rawText: string): Result<unknown> {
     );
   }
 }
+
+/** Narrows an unknown JSON value into a key-value Map without unsafe type casts. */
+export function toMap(value: unknown): ReadonlyMap<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("Expected object");
+  }
+  return new Map(Object.entries(value));
+}
+
+/** Extracts a string field or throws for catch-based schema validation. */
+export function toStr(value: unknown): string {
+  if (typeof value !== "string") throw new TypeError("Expected string");
+  return value;
+}
+
+/** Extracts a finite numeric field or throws for catch-based schema validation. */
+export function toNum(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) throw new TypeError("Expected number");
+  return value;
+}
+
+/** Narrows an unknown JSON value into a readonly array or throws for schema validation. */
+export function toArr(value: unknown): readonly unknown[] {
+  if (!Array.isArray(value)) throw new TypeError("Expected array");
+  return value;
+}

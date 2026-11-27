@@ -6,32 +6,63 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { AlertRuleForm } from "@/components/AlertRuleForm";
+import {
+  NumericField,
+  SectionCard,
+  SelectField,
+  TONE_SURFACE_CLASSES,
+} from "@/components/UiPrimitives";
+import { useAlertForm } from "@/hooks/useLocalAlerts";
+import { ALERT_THRESHOLD_MAX, ALERT_THRESHOLD_MIN } from "@/lib/constants";
 import { getDemoCityLocations } from "@/services/demo-data";
 import type { CityLocation } from "@/types/air-quality";
 import type { ThresholdAlertRule, TriggeredAlert } from "@/types/guidance";
 
-function TriggeredAlertsBanner({
-  triggeredAlerts,
-}: {
+type AddRuleHandler = (input: {
+  cityKey: string;
+  cityName: string;
+  metric: "usAqi" | "pm25";
+  threshold: number;
+}) => void;
+
+interface AlertFormProps {
+  readonly cityOptions: readonly CityLocation[];
+  readonly defaultCityKey: string;
+  readonly onAddRule: AddRuleHandler;
+}
+
+interface AlertsSectionProps {
+  readonly currentCity: CityLocation | null;
+  readonly rules: readonly ThresholdAlertRule[];
   readonly triggeredAlerts: readonly TriggeredAlert[];
-}) {
+  readonly onAddRule: AddRuleHandler;
+  readonly onToggleRule: (ruleId: string) => void;
+  readonly onRemoveRule: (ruleId: string) => void;
+}
+
+const BTN = {
+  submit:
+    "min-h-[48px] rounded-lg border-2 border-accent bg-accent px-4 py-2 text-sm font-semibold text-accent-ink hover:bg-accent-strong",
+  toggle:
+    "min-h-[44px] rounded-md border border-borderc-strong px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface-muted",
+  remove:
+    "min-h-[44px] rounded-md border border-rose-700 px-3 py-1.5 text-xs font-semibold text-rose-900 hover:bg-rose-50 dark:border-rose-400 dark:text-rose-100 dark:hover:bg-rose-950/60",
+};
+
+function TriggeredAlertsBanner({ alerts }: { readonly alerts: readonly TriggeredAlert[] }) {
   const t = useTranslations("alerts");
-  if (triggeredAlerts.length === 0) return null;
+  if (alerts.length === 0) return null;
   return (
-    <div
-      role="alert"
-      className="mt-4 rounded-lg border-2 border-amber-700 bg-amber-50 p-4 text-amber-950 dark:border-amber-400 dark:bg-amber-950/60 dark:text-amber-100"
-    >
+    <div role="alert" className={`mt-4 rounded-lg p-4 ${TONE_SURFACE_CLASSES.amber}`}>
       <h3 className="text-base font-bold">{t("activeAlertsTitle")}</h3>
       <ul className="mt-2 list-disc space-y-1 pl-5 text-sm font-semibold">
-        {triggeredAlerts.map((alert) => (
-          <li key={alert.ruleId}>
+        {alerts.map((a) => (
+          <li key={a.ruleId}>
             {t("ruleTriggered", {
-              city: alert.cityName,
-              metric: t(alert.metric === "usAqi" ? "metricUsAqi" : "metricPm25"),
-              actual: alert.actualValue,
-              threshold: alert.threshold,
+              city: a.cityName,
+              metric: t(a.metric === "usAqi" ? "metricUsAqi" : "metricPm25"),
+              actual: a.actualValue,
+              threshold: a.threshold,
             })}
           </li>
         ))}
@@ -40,14 +71,60 @@ function TriggeredAlertsBanner({
   );
 }
 
+function AlertRuleForm({ cityOptions, defaultCityKey, onAddRule }: AlertFormProps) {
+  const t = useTranslations("alerts");
+  const s = useAlertForm(cityOptions, defaultCityKey, onAddRule);
+  const cityOpts = cityOptions.map((c) => ({ value: c.key, label: c.name }));
+  const metricOpts = [
+    { value: "usAqi", label: t("metricUsAqi") },
+    { value: "pm25", label: t("metricPm25") },
+  ];
+  return (
+    <form
+      onSubmit={s.handleSubmit}
+      noValidate
+      className="mt-4 grid gap-4 sm:grid-cols-4 sm:items-end"
+    >
+      <SelectField
+        id="alert-city-select"
+        label={t("cityLabel")}
+        value={s.cityKey}
+        onChange={s.setCityKey}
+        options={cityOpts}
+      />
+      <SelectField
+        id="alert-metric-select"
+        label={t("metricLabel")}
+        value={s.metric}
+        onChange={s.updateMetric}
+        options={metricOpts}
+      />
+      <NumericField
+        id="alert-threshold-input"
+        label={t("thresholdLabel")}
+        min={ALERT_THRESHOLD_MIN}
+        max={ALERT_THRESHOLD_MAX}
+        value={s.thresholdRaw}
+        invalid={s.invalid}
+        errorId="alert-threshold-error"
+        errorText={t("thresholdError")}
+        onChange={s.updateThreshold}
+      />
+      <button type="submit" className={BTN.submit}>
+        {t("addAlertButton")}
+      </button>
+    </form>
+  );
+}
+
 function AlertRuleRow({
   rule,
-  onToggleRule,
-  onRemoveRule,
+  onToggle,
+  onRemove,
 }: {
   readonly rule: ThresholdAlertRule;
-  readonly onToggleRule: (ruleId: string) => void;
-  readonly onRemoveRule: (ruleId: string) => void;
+  readonly onToggle: (ruleId: string) => void;
+  readonly onRemove: (ruleId: string) => void;
 }) {
   const t = useTranslations("alerts");
   return (
@@ -61,18 +138,18 @@ function AlertRuleRow({
           type="button"
           aria-pressed={rule.enabled}
           onClick={() => {
-            onToggleRule(rule.id);
+            onToggle(rule.id);
           }}
-          className="min-h-[44px] rounded-md border border-borderc-strong px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface-muted"
+          className={BTN.toggle}
         >
           {t(rule.enabled ? "toggleOn" : "toggleOff")}
         </button>
         <button
           type="button"
           onClick={() => {
-            onRemoveRule(rule.id);
+            onRemove(rule.id);
           }}
-          className="min-h-[44px] rounded-md border border-rose-700 px-3 py-1.5 text-xs font-semibold text-rose-900 hover:bg-rose-50 dark:border-rose-400 dark:text-rose-100 dark:hover:bg-rose-950/60"
+          className={BTN.remove}
         >
           {t("deleteRule")}
         </button>
@@ -81,78 +158,39 @@ function AlertRuleRow({
   );
 }
 
-function AlertRuleList({
-  rules,
-  onToggleRule,
-  onRemoveRule,
-}: {
-  readonly rules: readonly ThresholdAlertRule[];
-  readonly onToggleRule: (ruleId: string) => void;
-  readonly onRemoveRule: (ruleId: string) => void;
-}) {
-  const t = useTranslations("alerts");
-  return (
-    <div className="mt-5" aria-live="polite">
-      {rules.length === 0 ? (
-        <p className="text-sm text-ink-muted">{t("noRules")}</p>
-      ) : (
-        <ul className="space-y-2">
-          {rules.map((rule) => (
-            <AlertRuleRow
-              key={rule.id}
-              rule={rule}
-              onToggleRule={onToggleRule}
-              onRemoveRule={onRemoveRule}
-            />
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
 /** Configures local browser AQI/PM2.5 threshold rules and surfaces live alerts when breached. */
-export function ThresholdAlertsSection({
-  currentCity,
-  rules,
-  triggeredAlerts,
-  onAddRule,
-  onToggleRule,
-  onRemoveRule,
-}: {
-  readonly currentCity: CityLocation | null;
-  readonly rules: readonly ThresholdAlertRule[];
-  readonly triggeredAlerts: readonly TriggeredAlert[];
-  readonly onAddRule: (input: {
-    cityKey: string;
-    cityName: string;
-    metric: "usAqi" | "pm25";
-    threshold: number;
-  }) => void;
-  readonly onToggleRule: (ruleId: string) => void;
-  readonly onRemoveRule: (ruleId: string) => void;
-}) {
+export function ThresholdAlertsSection(props: AlertsSectionProps) {
   const t = useTranslations("alerts");
   const presets = getDemoCityLocations();
-  const cityOptions =
-    currentCity && !presets.some((c) => c.key === currentCity.key)
-      ? [currentCity, ...presets]
-      : presets;
+  const cur = props.currentCity;
+  const cityOptions = cur && !presets.some((c) => c.key === cur.key) ? [cur, ...presets] : presets;
   return (
-    <section
-      id="alerts"
-      className="rounded-xl border border-borderc bg-surface-elevated p-4 shadow-sm sm:p-6"
-    >
+    <SectionCard id="alerts">
       <h2 id="alerts-heading" className="text-xl font-bold text-ink">
         {t("sectionTitle")}
       </h2>
-      <TriggeredAlertsBanner triggeredAlerts={triggeredAlerts} />
+      <TriggeredAlertsBanner alerts={props.triggeredAlerts} />
       <AlertRuleForm
         cityOptions={cityOptions}
-        defaultCityKey={currentCity?.key ?? "delhi"}
-        onAddRule={onAddRule}
+        defaultCityKey={cur?.key ?? "delhi"}
+        onAddRule={props.onAddRule}
       />
-      <AlertRuleList rules={rules} onToggleRule={onToggleRule} onRemoveRule={onRemoveRule} />
-    </section>
+      <div className="mt-5" aria-live="polite">
+        {props.rules.length === 0 ? (
+          <p className="text-sm text-ink-muted">{t("noRules")}</p>
+        ) : (
+          <ul className="space-y-2">
+            {props.rules.map((r) => (
+              <AlertRuleRow
+                key={r.id}
+                rule={r}
+                onToggle={props.onToggleRule}
+                onRemove={props.onRemoveRule}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+    </SectionCard>
   );
 }

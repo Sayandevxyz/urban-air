@@ -6,6 +6,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { TONE_SURFACE_CLASSES } from "@/components/UiPrimitives";
 import type { LoadState } from "@/types/api";
 
 interface StatusBannerProps {
@@ -16,8 +17,7 @@ interface StatusBannerProps {
 }
 
 const NEUTRAL_BOX_CLASS = "rounded-xl border border-borderc bg-surface-elevated p-5";
-const WARN_BOX_CLASS =
-  "rounded-xl border-2 border-amber-700 bg-amber-50 p-4 text-amber-950 dark:border-amber-400 dark:bg-amber-950/60 dark:text-amber-100";
+const WARN_BOX_CLASS = `rounded-xl p-4 ${TONE_SURFACE_CLASSES.amber}`;
 
 function ErrorStatusCard({
   title,
@@ -31,7 +31,7 @@ function ErrorStatusCard({
   return (
     <div
       role="alert"
-      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-rose-700 bg-rose-50 p-4 text-rose-950 dark:border-rose-400 dark:bg-rose-950/60 dark:text-rose-100"
+      className={`flex flex-wrap items-center justify-between gap-3 rounded-xl p-4 ${TONE_SURFACE_CLASSES.rose}`}
     >
       <div>
         <p className="text-base font-bold">{title}</p>

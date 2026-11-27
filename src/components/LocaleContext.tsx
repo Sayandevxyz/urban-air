@@ -63,6 +63,7 @@ export function AppLocaleProvider({
   readonly initialMessages?: LocaleMessages;
 }) {
   const [locale, setLocaleState] = useState<SupportedLocale>(initialLocale);
+  const [initialTargetLocale] = useState(initialLocale);
   const [messages, setMessages] = useState<LocaleMessages>(initialMessages);
 
   const applyLocale = useCallback((nextLocale: SupportedLocale) => {
@@ -83,13 +84,13 @@ export function AppLocaleProvider({
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(LOCALE_STORAGE_KEY);
-      if (isSupportedLocale(saved) && saved !== locale) {
+      if (isSupportedLocale(saved) && saved !== initialTargetLocale) {
         applyLocale(saved);
       }
     } catch {
       // Ignore storage failures.
     }
-  }, [applyLocale, locale]);
+  }, [applyLocale, initialTargetLocale]);
 
   return (
     <LocaleContext.Provider value={{ locale, setLocale: applyLocale }}>
