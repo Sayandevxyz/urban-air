@@ -15,23 +15,34 @@ import { SUPPORTED_LOCALES, type SupportedLocale } from "@/lib/constants";
  */
 export type LocaleMessages = typeof enMessages;
 
+const LOCALE_CACHE = new Map<SupportedLocale, LocaleMessages>([["en", enMessages]]);
+
 /**
  * Loads the translation catalog for the requested locale on demand to keep initial JS minimal.
  */
 export async function loadLocaleMessages(locale: SupportedLocale): Promise<LocaleMessages> {
+  const cached = LOCALE_CACHE.get(locale);
+  if (cached) return cached;
   switch (locale) {
     case "hi": {
       const mod = await import("@/i18n/hi.json");
+      LOCALE_CACHE.set("hi", mod.default);
       return mod.default;
     }
     case "ta": {
       const mod = await import("@/i18n/ta.json");
+      LOCALE_CACHE.set("ta", mod.default);
       return mod.default;
     }
     case "en":
     default:
       return enMessages;
   }
+}
+
+/** Preloads the requested locale translation catalog into memory for instant lookup. */
+export function preloadLocaleMessages(locale: SupportedLocale): Promise<LocaleMessages> {
+  return loadLocaleMessages(locale);
 }
 
 interface LocaleContextValue {

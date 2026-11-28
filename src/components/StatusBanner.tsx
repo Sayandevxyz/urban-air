@@ -6,7 +6,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { TONE_SURFACE_CLASSES } from "@/components/UiPrimitives";
+import { TONE_SURFACE_CLASSES } from "@/lib/constants";
 import type { LoadState } from "@/types/api";
 
 interface StatusBannerProps {
