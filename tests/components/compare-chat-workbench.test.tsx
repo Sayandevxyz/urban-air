@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 import { afterEach, expect, test, vi } from "vitest";
 import { AirQualityChat } from "@/components/AirQualityChat";
 import { CityCompareSection } from "@/components/CityCompareSection";
-import { AppLocaleProvider, useAppLocale } from "@/components/LocaleContext";
+import { AppLocaleProvider, preloadLocaleMessages, useAppLocale } from "@/components/LocaleContext";
 import { UrbanAirWorkbench } from "@/components/UrbanAirWorkbench";
 import { getDemoAirQualityReport, getDemoCityLocations } from "@/services/demo-data";
 import type { ResidentProfile } from "@/types/guidance";
@@ -173,15 +173,13 @@ test("UrbanAirWorkbench restores persisted locale, switches hi/ta/en, and toggle
   await user.click(screen.getByRole("button", { name: "outside-noop" }));
   cleanup();
 
+  await Promise.all([preloadLocaleMessages("hi"), preloadLocaleMessages("ta")]);
   window.localStorage.setItem("urban-air:locale:v1", "hi");
   const waitLang = (lang: string, label: string) =>
-    waitFor(
-      () => {
-        expect(document.documentElement.lang).toBe(lang);
-        expect(screen.getByLabelText(label)).toBeInTheDocument();
-      },
-      { timeout: 8000 },
-    );
+    waitFor(() => {
+      expect(document.documentElement.lang).toBe(lang);
+      expect(screen.getByLabelText(label)).toBeInTheDocument();
+    });
   const { container } = renderWb(true);
   await waitLang("hi", "भाषा");
   await user.selectOptions(screen.getByLabelText("भाषा"), "ta");

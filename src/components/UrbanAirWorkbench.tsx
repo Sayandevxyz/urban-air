@@ -11,7 +11,6 @@ import { useMemo, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { AqiDashboard } from "@/components/AqiDashboard";
 import { CitySearchBar } from "@/components/CitySearchBar";
-import { GuidanceSection } from "@/components/GuidanceSection";
 import { StatusBanner } from "@/components/StatusBanner";
 import { useAirQualityData } from "@/hooks/useAirQualityData";
 import { useCityComparison } from "@/hooks/useCityComparison";
@@ -19,6 +18,10 @@ import { useLocalAlerts } from "@/hooks/useLocalAlerts";
 import type { AirQualityReport } from "@/types/air-quality";
 import type { ResidentProfile } from "@/types/guidance";
 
+const GuidanceSection = dynamic(
+  () => import("@/components/GuidanceSection").then((m) => m.GuidanceSection),
+  { ssr: true },
+);
 const ActivityPlanner = dynamic(
   () => import("@/components/ActivityPlanner").then((m) => m.ActivityPlanner),
   { ssr: true },

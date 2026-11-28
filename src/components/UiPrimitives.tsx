@@ -4,20 +4,14 @@
 // ============================================================================
 
 import type { ReactNode } from "react";
+import { TONE_SURFACE_CLASSES } from "@/lib/constants";
+
+export { TONE_SURFACE_CLASSES };
 
 const SECTION_CARD_CLASS =
   "rounded-xl border border-borderc bg-surface-elevated p-4 shadow-sm sm:p-6";
 const FIELD_INPUT_CLASS =
   "mt-1 min-h-[48px] w-full rounded-lg border-2 border-borderc-strong px-3 py-2 text-base text-ink";
-
-/** Semantic WCAG AA high-contrast surface classes keyed by tone variant. */
-export const TONE_SURFACE_CLASSES = {
-  emerald:
-    "border-2 border-emerald-700 bg-emerald-50 text-emerald-950 dark:border-emerald-400 dark:bg-emerald-950/60 dark:text-emerald-100",
-  amber:
-    "border-2 border-amber-700 bg-amber-50 text-amber-950 dark:border-amber-400 dark:bg-amber-950/60 dark:text-amber-100",
-  rose: "border-2 border-rose-700 bg-rose-50 text-rose-950 dark:border-rose-400 dark:bg-rose-950/60 dark:text-rose-100",
-} as const;
 
 /** Elevated card landmark wrapper ensuring consistent spacing and border tokens. */
 export function SectionCard({

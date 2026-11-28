@@ -148,3 +148,11 @@ export const FORECAST_HOURS_WINDOW = 48;
 export const TREND_DAYS_WINDOW = 7;
 /** Default lookahead horizon evaluated by the activity window planner. */
 export const PLANNER_HOURS_WINDOW = 24;
+/** Semantic WCAG AA high-contrast surface classes keyed by tone variant. */
+export const TONE_SURFACE_CLASSES = {
+  emerald:
+    "border-2 border-emerald-700 bg-emerald-50 text-emerald-950 dark:border-emerald-400 dark:bg-emerald-950/60 dark:text-emerald-100",
+  amber:
+    "border-2 border-amber-700 bg-amber-50 text-amber-950 dark:border-amber-400 dark:bg-amber-950/60 dark:text-amber-100",
+  rose: "border-2 border-rose-700 bg-rose-50 text-rose-950 dark:border-rose-400 dark:bg-rose-950/60 dark:text-rose-100",
+} as const;
